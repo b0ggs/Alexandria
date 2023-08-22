@@ -28,9 +28,8 @@ import {AlexandriaMint} from "./AlexandriaMint.sol";
 
 // Errors
 error NotManager();
-error InsufficientBond(uint256 bondAmount, uint256 requiredAmount);
 error TransferFailed();
-error InsufficientMintPayment(uint256 sentAmount, uint256 requiredAmount);
+error PaymentError(uint256 sentAmount, uint256 requiredAmount);
 error ExceedsTreasuryBalance(uint256 requestedAmount, uint256 currentBalance);
 
 /// @title Alexandria Version 1 Contract
@@ -51,7 +50,7 @@ contract AlexandriaV1 is ReentrancyGuard {
     // Events
     event BonusPercentageUpdated(uint8 oldPercentage, uint8 newPercentage);
     event ProposeBondUpdated(uint128 oldBond, uint128 newBond);
-    event TokenClaimedAndBurned(
+    event PageBurned(
         uint256 tokenId,
         address indexed claimer,
         uint256 backingValue
@@ -119,10 +118,11 @@ contract AlexandriaV1 is ReentrancyGuard {
         uint256 amount,
         address payable recipient
     ) external onlyManager {
-        if (amount > treasuryBalance)
+        if (amount > treasuryBalance) {
             revert ExceedsTreasuryBalance(amount, treasuryBalance);
+        }
         treasuryBalance -= amount;
-        recipient.transfer(amount);
+        _transferTo(recipient, amount, "Treasury Withdrawal");
     }
 
     /// @notice Proposes a new book.
@@ -163,29 +163,19 @@ contract AlexandriaV1 is ReentrancyGuard {
     ) external onlyManager nonReentrant {
         Book memory disputedBook = oracle.getDisputedBook(bookId);
         uint256 threeFourthsPayment = ((disputedBook.bookBondAmount * 2) / 4) *
-            3; // 3/4 of proposer bond + dispute bond
+            3;
+        address recipient = isPassed
+            ? disputedBook.proposer
+            : disputedBook.disputer;
+        _transferTo(
+            recipient,
+            threeFourthsPayment,
+            isPassed ? "Settled Pay Proposer" : "Settled Pay Disputer"
+        );
         if (isPassed) {
             oracle.addToMintQueueAfterDispute(bookId);
-            payable(disputedBook.proposer).transfer(threeFourthsPayment);
-            emit PaymentProcessed(
-                address(this),
-                disputedBook.proposer,
-                threeFourthsPayment,
-                threeFourthsPayment,
-                0,
-                "Settled Pay Proposer"
-            );
         } else {
             data.removeFromDisputeDictionary(bookId, disputedBook);
-            payable(disputedBook.disputer).transfer(threeFourthsPayment);
-            emit PaymentProcessed(
-                address(this),
-                disputedBook.disputer,
-                threeFourthsPayment,
-                threeFourthsPayment,
-                0,
-                "Settled Pay Disputer"
-            );
         }
     }
 
@@ -197,34 +187,13 @@ contract AlexandriaV1 is ReentrancyGuard {
         bondBalance -= payout.paymentAmount;
     }
 
-    /// @notice Mints multiple pages.
-    /// @param amount The number of pages to mint.
-    /// @param amounts The amounts for each page.
-    function mintPages(
-        uint256 amount,
-        uint256[] calldata amounts
-    ) external payable nonReentrant {
-        PayoutDetail[] memory payouts = mint.mintPages(
-            amount,
-            amounts,
-            msg.sender
-        );
-        for (uint256 i = 0; i < payouts.length; i++) {
-            PayoutDetail memory payout = payouts[i];
-            _handleMintPayment(payout.proposer, payout.paymentAmount);
-            treasuryBalance += payout.paymentAmount;
-            bondBalance -= payout.paymentAmount;
-        }
-    }
-
     /// @notice Claims and burns a token, allowing the holder to claim its backing value.
     /// @param tokenId The ID of the token to claim and burn.
     function claimAndBurn(uint256 tokenId) public nonReentrant {
         uint256 backing = backingPerToken();
         mint.burnTokens(msg.sender, tokenId, 1);
-        (bool success, ) = payable(msg.sender).call{value: backing}("");
-        if (!success) revert TransferFailed();
-        emit TokenClaimedAndBurned(tokenId, msg.sender, backing);
+        _transferTo(msg.sender, backing, "Rage Quit!");
+        emit PageBurned(tokenId, msg.sender, backing);
     }
 
     /// @notice Fetches the URI of a token.
@@ -257,25 +226,7 @@ contract AlexandriaV1 is ReentrancyGuard {
 
     // Internal functions
     function _handleBondPayment(uint256 _bookBondAmount) internal {
-        if (msg.value < _bookBondAmount)
-            revert InsufficientBond({
-                bondAmount: msg.value,
-                requiredAmount: _bookBondAmount
-            });
-        if (msg.value > _bookBondAmount) {
-            (bool success, ) = payable(msg.sender).call{
-                value: msg.value - _bookBondAmount
-            }("");
-            if (!success) revert TransferFailed();
-            emit PaymentProcessed(
-                msg.sender,
-                address(this),
-                msg.value,
-                _bookBondAmount,
-                msg.value - _bookBondAmount,
-                "Bond"
-            );
-        }
+        _processPayment(_bookBondAmount, "Bond Refund");
         bondBalance += _bookBondAmount;
     }
 
@@ -285,50 +236,66 @@ contract AlexandriaV1 is ReentrancyGuard {
     ) internal {
         uint256 totalPayout = _paymentAmount +
             ((_paymentAmount * bonusPercentage) / 100);
-        if (_proposer != msg.sender) {
-            if (msg.value < totalPayout)
-                revert InsufficientMintPayment({
-                    sentAmount: msg.value,
-                    requiredAmount: totalPayout
-                });
-            if (msg.value > totalPayout) {
-                (bool success, ) = payable(msg.sender).call{
-                    value: msg.value - totalPayout
-                }("");
-                if (!success) revert TransferFailed();
-                emit PaymentProcessed(
-                    address(this),
-                    msg.sender,
-                    msg.value,
-                    totalPayout,
-                    msg.value - totalPayout,
-                    "Mint Refund"
-                );
-            }
-            payable(_proposer).transfer(totalPayout);
-            emit PaymentProcessed(
-                address(this),
-                _proposer,
-                totalPayout,
-                totalPayout,
-                0,
-                "Mint Pay Proposer"
-            );
-        } else {
+
+        if (_proposer == msg.sender) {
+            // If the proposer is the minter, there is no payment required.
+            // Refund if they sent payment.
             if (msg.value > 0) {
-                (bool success, ) = payable(msg.sender).call{value: msg.value}(
-                    ""
-                );
-                if (!success) revert TransferFailed();
-                emit PaymentProcessed(
-                    address(this),
-                    msg.sender,
-                    msg.value,
-                    0,
-                    msg.value,
-                    "Mint Refund"
-                );
+                _refund(msg.sender, msg.value, "Mint Refund");
             }
+        } else {
+            _processPayment(totalPayout, "Mint Refund");
+            _transferTo(_proposer, totalPayout, "Mint Pay Proposer");
         }
+    }
+
+    function _processPayment(
+        uint256 _requiredAmount,
+        string memory paymentType
+    ) internal {
+        if (msg.value < _requiredAmount) {
+            revert PaymentError({
+                sentAmount: msg.value,
+                requiredAmount: _requiredAmount
+            });
+        }
+
+        uint256 refundAmount = msg.value - _requiredAmount;
+        if (refundAmount > 0) {
+            _refund(msg.sender, refundAmount, paymentType);
+        }
+    }
+
+    function _refund(
+        address recipient,
+        uint256 amount,
+        string memory reason
+    ) internal {
+        (bool success, ) = payable(recipient).call{value: amount}("");
+        if (!success) revert TransferFailed();
+        emit PaymentProcessed(
+            address(this),
+            recipient,
+            amount,
+            0,
+            amount,
+            reason
+        );
+    }
+
+    function _transferTo(
+        address recipient,
+        uint256 amount,
+        string memory paymentType
+    ) internal {
+        payable(recipient).transfer(amount);
+        emit PaymentProcessed(
+            address(this),
+            recipient,
+            amount,
+            amount,
+            0,
+            paymentType
+        );
     }
 }

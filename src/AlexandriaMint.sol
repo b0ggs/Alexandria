@@ -9,10 +9,7 @@ import {AlexandriaData, Book, PayoutDetail} from "./AlexandriaData.sol";
 error NotManager();
 error NoPagesInQueue();
 error NFTMintedWithCurrentID(uint256 id);
-error NotEnoughPages(uint256 pagesInQueue, uint256 amount);
 error UriAlreadySet();
-error BurnTransferFailed();
-error AmountNotOne(uint256 index);
 
 /// @title Alexandria Mint Contract
 /// @author Bogs
@@ -32,7 +29,6 @@ contract AlexandriaMint is ERC1155, ERC1155Supply {
         uint32 timestamp,
         string carURI
     );
-    event PagesMinted(uint256[] tokenIds, address indexed recipient);
 
     // Modifiers
     modifier onlyManager() {
@@ -62,88 +58,38 @@ contract AlexandriaMint is ERC1155, ERC1155Supply {
     }
 
     /// @notice Mints a single page.
-    /// @param msgSender The address to receive the minted page.
+    /// @param recipient The address to receive the minted page.
     /// @return Payout details for the minted page.
     function mintPage(
-        address msgSender
+        address recipient
     ) external onlyManager returns (PayoutDetail memory) {
         if (data.getPagesInMintQueue() == 0) revert NoPagesInQueue();
-        PayoutDetail memory payout;
         Book memory _mintBook = data.getMintBook();
-        payout.proposer == _mintBook.proposer;
-        payout.paymentAmount == _mintBook.bookBondAmount / _mintBook.pageCount;
+
         if (exists(_mintBook.ids[0]))
             revert NFTMintedWithCurrentID({id: _mintBook.ids[0]});
-        _mint(msgSender, _mintBook.ids[0], 1, "");
+
+        PayoutDetail memory payout = PayoutDetail({
+            proposer: _mintBook.proposer,
+            paymentAmount: _mintBook.bookBondAmount / _mintBook.pageCount
+        });
+
+        _mint(recipient, _mintBook.ids[0], 1, "");
         _setTokenUri(_mintBook.ids[0], _mintBook.carURI);
+
         data.updatePageArrayQueue(1);
         data.updateMintQueue();
-        totalNFTs = totalNFTs + 1;
+
+        totalNFTs += 1;
+
         emit PageMinted(
             _mintBook.ids[0],
-            msgSender,
+            recipient,
             uint32(block.timestamp),
             _mintBook.carURI
         );
-        return payout;
-    }
 
-    /// @notice Mints multiple pages.
-    /// @dev This is an abomination of a function and we should lose it after the hackathon
-    /// @param amount The number of pages to mint.
-    /// @param amounts The amounts for each page. amounts must each = 1
-    /// @param msgSender The address to receive the minted pages.
-    /// @return An array of payout details for the minted pages.
-    function mintPages(
-        uint256 amount,
-        uint256[] calldata amounts,
-        address msgSender
-    ) external onlyManager returns (PayoutDetail[] memory) {
-        for (uint256 i = 0; i < amounts.length; i++) {
-            if (amounts[i] != 1) revert AmountNotOne(i);
-        }
-        uint256 pages = data.pagesInQueue();
-        if (pages < amount)
-            revert NotEnoughPages({pagesInQueue: pages, amount: amount});
-        PayoutDetail[100] memory payouts;
-        uint256 payoutIndex;
-        totalNFTs = totalNFTs + amount;
-        uint256[] memory ids = new uint256[](amount);
-        uint256 currentIndex = 0;
-        while (amount > 0) {
-            Book memory _mintBook = data.getMintBook();
-            uint256 pagesToTake = (amount > _mintBook.ids.length)
-                ? _mintBook.ids.length
-                : amount;
-            uint256 pageValue = _mintBook.bookBondAmount / _mintBook.pageCount;
-            for (uint256 i = 0; i < pagesToTake; i++) {
-                ids[currentIndex] = _mintBook.ids[i];
-                _setTokenUri(ids[currentIndex], _mintBook.carURI);
-                currentIndex++;
-            }
-            bool proposerExists = false;
-            for (uint256 i = 0; i < payoutIndex; i++) {
-                if (payouts[i].proposer == _mintBook.proposer) {
-                    payouts[i].paymentAmount += (pagesToTake * pageValue);
-                    proposerExists = true;
-                    break;
-                }
-            }
-            if (!proposerExists) {
-                payouts[payoutIndex].proposer = _mintBook.proposer;
-                payouts[payoutIndex].paymentAmount = (pagesToTake * pageValue);
-                payoutIndex++;
-            }
-            amount -= pagesToTake;
-            data.updatePageArrayQueue(pagesToTake);
-        }
-        _mintBatch(msgSender, ids, amounts, "");
-        emit PagesMinted(ids, msgSender);
-        PayoutDetail[] memory finalPayouts = new PayoutDetail[](payoutIndex);
-        for (uint256 i = 0; i < payoutIndex; i++) {
-            finalPayouts[i] = payouts[i];
-        }
-        return finalPayouts;
+        return payout;
     }
 
     /// @notice Burns a specific amount of tokens from a given address.
