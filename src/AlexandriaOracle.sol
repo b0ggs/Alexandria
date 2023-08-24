@@ -91,6 +91,8 @@ contract AlexandriaOracle {
     event ReservationExpired(uint256 indexed reservationId);
 
     // Modifiers
+    //TODO add modifiers after testing
+
     modifier onlyManager() {
         //  if (msg.sender != manager) revert NotManager();
         _;

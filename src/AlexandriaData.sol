@@ -21,7 +21,7 @@ contract AlexandriaData {
     address public mintManager;
     address public manager;
     //TODO Update dispute period to 1 days for production;
-    uint32 public defaultDisputePeriod = 1 seconds;
+    uint32 public defaultDisputePeriod = 1 hours;
 
     // Events
     event DisputePeriodUpdated(uint32 oldPeriod, uint32 newPeriod);
@@ -42,6 +42,7 @@ contract AlexandriaData {
     event BookAddedToQueue(Book book);
 
     // Modifiers
+    //TODO add modifiers after testing
     /// @notice Ensures only the oracle manager can call a function.
     modifier onlyOracleManager() {
         //   if (msg.sender != oracleManager) revert NotAuthorized();
@@ -236,17 +237,22 @@ contract AlexandriaData {
     }
 
     /// @notice Updates the mint queue by moving books from the proposed dictionary to the mint queue after the dispute period.
-    function updateMintQueue() external onlyMintManager {
-        bool isUpdated = DataLibrary._updateMintQueue(
+    function updateMintQueue()
+        external
+        onlyMintManager
+        returns (bool isUpdated)
+    {
+        bool _isUpdated = DataLibrary._updateMintQueue(
             proposedDictionary,
             defaultDisputePeriod,
             bookMintQueue
         );
-        if (isUpdated) {
+        if (_isUpdated) {
             emit MintQueueUpdated("Book added");
         } else {
             emit MintQueueUpdated("Dispute Period Ongoing");
         }
+        return _isUpdated;
     }
 
     /// @notice Retrieves the number of books in the mint queue.

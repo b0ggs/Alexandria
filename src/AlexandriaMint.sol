@@ -31,6 +31,7 @@ contract AlexandriaMint is ERC1155, ERC1155Supply {
     );
 
     // Modifiers
+    //TODO add modifiers after testing
     modifier onlyManager() {
         //  if (msg.sender != manager) revert NotManager();
         _;
@@ -78,7 +79,6 @@ contract AlexandriaMint is ERC1155, ERC1155Supply {
         _setTokenUri(_mintBook.startPage, _mintBook.carURI);
 
         data.updatePageQueue(1);
-        data.updateMintQueue();
 
         totalNFTs += 1;
 

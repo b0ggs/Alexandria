@@ -72,6 +72,8 @@ contract AlexandriaV1 is ReentrancyGuard {
     );
 
     // Modifiers
+    //TODO add modifiers after testing
+
     modifier onlyManager() {
         //    if (msg.sender != manager) revert NotManager();
         _;
@@ -119,8 +121,15 @@ contract AlexandriaV1 is ReentrancyGuard {
 
     /// @notice Moves books from the proposedDictionary to the mintQueue
     /// It's essential to call this function to insure there are mintable pages
+    ///NOTE proposers should be incentivized to call this because they earn a fee on mints.
+    ///NOTE there needs to be additional testing as to whether this should loop or move 1 book
+    ///NOTE based on the incentives.
     function updateMintQueue() external {
-        data.updateMintQueue();
+        bool continueUpdating = true;
+
+        while (continueUpdating) {
+            continueUpdating = data.updateMintQueue();
+        }
     }
 
     /// @notice Updates the bonus percentage that a proposer recieves when pages are minted.
@@ -243,12 +252,18 @@ contract AlexandriaV1 is ReentrancyGuard {
         (PayoutDetail memory payout, uint256 bookId) = mint.mintPage(
             msg.sender
         );
-        emit CustomEvent1(payout, bookId);
-        _handleMintPayment(payout.proposer, payout.paymentAmount);
+
+        address paymentRecipient = !wasDisputed[bookId] ||
+            msg.sender == payout.proposer
+            ? payout.proposer
+            : address(this);
+
         if (!wasDisputed[bookId]) {
             treasuryBalance += payout.paymentAmount;
             bondBalance -= payout.paymentAmount;
         }
+
+        _handleMintPayment(paymentRecipient, payout.paymentAmount);
     }
 
     /// @notice Claims and burns a token, allowing the holder to claim its backing value.
@@ -308,10 +323,11 @@ contract AlexandriaV1 is ReentrancyGuard {
     ) internal {
         uint256 totalPayout = _paymentAmount +
             ((_paymentAmount * bonusPercentage) / 100);
-        emit CustomEvent(_proposer, totalPayout);
 
         if (_proposer == msg.sender) {
             _processPayment(0, "Mint Refund");
+        } else if (_proposer == address(this)) {
+            _processPayment(totalPayout, "Mint Refund"); // Adjust this line to handle the payment correctly when the contract is the proposer
         } else {
             _processPayment(totalPayout, "Mint Refund");
             _transferTo(_proposer, totalPayout, "Mint Pay Proposer");
