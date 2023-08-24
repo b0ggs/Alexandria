@@ -1,16 +1,17 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.8.7;
-
 /// @dev Struct representing a book with its details.
 struct Book {
-    address proposer; // Address of the proposer
-    address disputer; // Address of the disputer
-    bytes32 bookHash; // Keccak hash representing the book
-    uint32 timestamp; // Timestamp of the proposal
-    uint16 pageCount; // Total number of pages in the book
-    uint256[] ids; // Array of ids for each page
-    uint256 bookBondAmount; // Bond amount for the book
-    string carURI; // IPFS CID for the book
+    bytes32 bookHash;
+    uint256 bookId;
+    uint256 startPage;
+    uint256 endPage;
+    uint256 bookBondAmount;
+    address proposer;
+    address disputer;
+    uint32 timestamp;
+    uint16 pageCount;
+    string carURI;
 }
 
 /// @dev Struct representing payout details.
@@ -50,7 +51,7 @@ library DataLibrary {
     /// @param _value The book to be added.
     function addToQueue(QueueState storage state, Book memory _value) public {
         state.queue[state.tail] = _value;
-        state.totalIds += _value.ids.length;
+        state.totalIds += _value.pageCount; // Adjusted to use pageCount
         state.tail++;
     }
 
@@ -58,7 +59,7 @@ library DataLibrary {
     /// @param state The current state of the queue.
     function removeFromQueue(QueueState storage state) public {
         if (state.head >= state.tail) revert QueueEmpty();
-        state.totalIds -= state.queue[state.head].ids.length;
+        state.totalIds -= state.queue[state.head].pageCount; // Adjusted to use pageCount
         delete state.queue[state.head];
         state.head++;
     }
@@ -86,26 +87,22 @@ library DataLibrary {
     /// @notice Updates the page array in the queue.
     /// @param state The current state of the queue.
     /// @param pagesToRemove The number of pages to remove.
-    function updatePageArrayQueue(
+    function updatePageQueue(
         QueueState storage state,
         uint256 pagesToRemove
     ) public {
         Book storage currentBook = state.queue[state.head];
-        if (currentBook.ids.length < pagesToRemove)
+
+        // Check if there are enough pages to remove
+        if (currentBook.endPage - currentBook.startPage + 1 < pagesToRemove) {
             revert NotEnoughPagesInBook();
-
-        // Move the elements in the array to fill the gap created by the removed pages
-        for (uint256 i = 0; i < currentBook.ids.length - pagesToRemove; i++) {
-            currentBook.ids[i] = currentBook.ids[i + pagesToRemove];
         }
 
-        // Pop the last pagesToRemove elements
-        for (uint256 i = 0; i < pagesToRemove; i++) {
-            currentBook.ids.pop();
-        }
+        // Increment the startPage pointer by pagesToRemove
+        currentBook.startPage += pagesToRemove;
 
-        // If all pages are removed, delete the book from the queue
-        if (currentBook.ids.length == 0) {
+        // If all pages are minted, remove the book from the queue
+        if (currentBook.startPage > currentBook.endPage) {
             removeFromQueue(state);
         }
 

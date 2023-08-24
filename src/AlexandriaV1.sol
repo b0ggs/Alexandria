@@ -2,21 +2,21 @@
 // Fix manager roles for Mint and Oracle
 //NOTE update book queue on calls
 // View function to view all managers and other contracts?
-//// hash for testing 0x3fd54831f488a22b28398de0c567a3b064b937f54f81739ae9bd545967f3abab. // book 1 5 pages
-// 0x3fd54831f588a22b28398de0c567a3b064b937f54f81739ae9bd545967f3abab. // book 2 5 pages
-//0x3fd54831f588a22b28398df0c567a3b064b937f54f81739ae9bd545967f3abab. // book 3 5 pages
-//0x3fd54831f588a22b28398df0c567a3b064b937f54f81739ae9bd545967f3abac // book 4 1 page
-//0x3fd54831f588a22b28398df0c567a3b064b937f54f81739ae9bd545967f3abad // book 5 1 page
+//// 0x3fd54831f488a22b28398de0c567a3b064b937f54f81739ae9bd545967f3ab1a
+//// 0x3fd54831f488a22b28398de0c567a3b064b937f54f81739ae9bd545967f3ab1b
+//// 0x3fd54831f488a22b28398de0c567a3b064b937f54f81739ae9bd545967f3ab1c
+//// 0x3fd54831f488a22b28398de0c567a3b064b937f54f81739ae9bd545967f3ab1d
+//// 0x3fd54831f488a22b28398de0c567a3b064b937f54f81739ae9bd545967f3ab1e
+//// 0x3fd54831f488a22b28398de0c567a3b064b937f54f81739ae9bd545967f3ab1f
+
 //0x3fd54831f588a22b28398df0c567a3b064b937f54f81739ae9bd545967f3abae
 // Move bondBalance, totalBond, Etc. to this contract
 // Have this contract handle all ETH and payments. Remove from mint.
 
-// CHECK why non-proposer made more ETH
-// checks for balances (bondBalance, treasury)
-// clean up and comment code
-// What other functions in this contract? Set managers?
-//Can we transfer NFTs?
-// How can we batch burn?
+//TODO
+// Test adding books from propose to mintqueue without a dispute
+// checkAndSlash one reservation then three
+// dispute re
 
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.7;
@@ -41,11 +41,18 @@ contract AlexandriaV1 is ReentrancyGuard {
     AlexandriaData public data;
     AlexandriaOracle public oracle;
     AlexandriaMint public mint;
+    mapping(uint256 => bool) public wasDisputed;
     address public manager;
     uint256 public treasuryBalance = 0;
     uint256 public bondBalance = 0;
     uint128 public proposeBond = 0.001 ether;
     uint8 public bonusPercentage = 10;
+    uint8 public slashPercentage = 25;
+    uint8 public settlePercentage = 75; // orcle dispute reward
+
+    //TODO remove Debug Events
+    event CustomEvent(address proposer, uint256 payout);
+    event CustomEvent1(PayoutDetail payout, uint256 bookID);
 
     // Events
     event BonusPercentageUpdated(uint8 oldPercentage, uint8 newPercentage);
@@ -66,7 +73,7 @@ contract AlexandriaV1 is ReentrancyGuard {
 
     // Modifiers
     modifier onlyManager() {
-        if (msg.sender != manager) revert NotManager();
+        //    if (msg.sender != manager) revert NotManager();
         _;
     }
 
@@ -85,11 +92,35 @@ contract AlexandriaV1 is ReentrancyGuard {
         mint = AlexandriaMint(_mintAddress);
     }
 
+    // TODO: erase for production
+    /// @notice Checks the contract's ETH balance against the sum of bondBalance and treasuryBalance.
+    /// @return contractBalance The current ETH balance of the contract.
+    /// @return combinedBalances The sum of bondBalance and treasuryBalance.
+    function checkBalances()
+        public
+        view
+        returns (uint256 contractBalance, uint256 combinedBalances)
+    {
+        contractBalance = address(this).balance;
+        combinedBalances = bondBalance + treasuryBalance;
+        require(
+            contractBalance == combinedBalances,
+            "Inconsistency in balances detected!"
+        );
+        return (contractBalance, combinedBalances);
+    }
+
     // External functions
     /// @notice Sets a new manager for the contract.
     /// @param _manager The address of the new manager. This should be the governance address.
     function setManager(address _manager) external onlyManager {
         manager = _manager;
+    }
+
+    /// @notice Moves books from the proposedDictionary to the mintQueue
+    /// It's essential to call this function to insure there are mintable pages
+    function updateMintQueue() external {
+        data.updateMintQueue();
     }
 
     /// @notice Updates the bonus percentage that a proposer recieves when pages are minted.
@@ -99,7 +130,27 @@ contract AlexandriaV1 is ReentrancyGuard {
     ) external onlyManager {
         uint8 oldPercentage = bonusPercentage;
         bonusPercentage = newBonusPercentage;
-        emit BonusPercentageUpdated(oldPercentage, newBonusPercentage);
+        emit BonusPercentageUpdated(oldPercentage, bonusPercentage);
+    }
+
+    /// @notice Updates the percentage of bonds that get slashed.
+    /// @param newSlashPercentage The new slash percentage value.
+    function updateSlashPercentage(
+        uint8 newSlashPercentage
+    ) external onlyManager {
+        uint8 oldPercentage = slashPercentage;
+        slashPercentage = newSlashPercentage;
+        emit BonusPercentageUpdated(oldPercentage, slashPercentage);
+    }
+
+    /// @notice Updates the percentage of the reward for an oracle dispute.
+    /// @param newSettlePercentage The new settle percentage value.
+    function updateSettlePercentage(
+        uint8 newSettlePercentage
+    ) external onlyManager {
+        uint8 oldPercentage = settlePercentage;
+        settlePercentage = newSettlePercentage;
+        emit BonusPercentageUpdated(oldPercentage, settlePercentage);
     }
 
     /// @notice Updates the bond required to propose.
@@ -121,30 +172,34 @@ contract AlexandriaV1 is ReentrancyGuard {
         if (amount > treasuryBalance) {
             revert ExceedsTreasuryBalance(amount, treasuryBalance);
         }
-        treasuryBalance -= amount;
         _transferTo(recipient, amount, "Treasury Withdrawal");
+        treasuryBalance -= amount;
+    }
+
+    /// @notice Reserves pages for a given book hash.
+    /// @dev This function also handles the bond payment for the reservation.
+    /// @param bookHash The hash of the book for which pages are being reserved.
+    /// @param pageCount The number of pages to reserve.
+    function reservePages(
+        bytes32 bookHash,
+        uint256 pageCount
+    ) external payable {
+        uint256 totalBookBond = pageCount * proposeBond;
+        oracle.reservePages(bookHash, pageCount, totalBookBond, msg.sender);
+        _handleBondPayment(totalBookBond);
+    }
+
+    /// @notice Checks and slashes bonds for expired reservations.
+    /// @dev This function also handles the redistribution of slashed bonds.
+    function checkAndSlashExpiredReservations() external {
+        uint256 bondsSlashed = oracle.checkAndSlashExpiredReservations();
+        _handleSlashedBonds(bondsSlashed);
     }
 
     /// @notice Proposes a new book.
-    /// @param bookHash The hash of the book.
     /// @param carURI CAR CID of the IPFS that holds all JSON data for pages.
-    /// @param pageCount The number of pages in the book.
-    /// @param ids Each id represents an individual page.
-    function propose(
-        bytes32 bookHash,
-        string calldata carURI,
-        uint16 pageCount,
-        uint256[] calldata ids
-    ) external payable {
-        oracle.propose(
-            bookHash,
-            pageCount * proposeBond,
-            carURI,
-            pageCount,
-            ids,
-            msg.sender
-        );
-        _handleBondPayment(pageCount * proposeBond);
+    function propose(string calldata carURI) external {
+        oracle.propose(carURI, msg.sender);
     }
 
     /// @notice Disputes a proposed book.
@@ -152,6 +207,7 @@ contract AlexandriaV1 is ReentrancyGuard {
     function dispute(uint256 proposedBookId) external payable {
         uint256 bookBondAmount = oracle.dispute(proposedBookId, msg.sender);
         _handleBondPayment(bookBondAmount);
+        wasDisputed[proposedBookId] = true;
     }
 
     /// @notice Settles a dispute for a book.
@@ -162,14 +218,14 @@ contract AlexandriaV1 is ReentrancyGuard {
         bool isPassed
     ) external onlyManager nonReentrant {
         Book memory disputedBook = oracle.getDisputedBook(bookId);
-        uint256 threeFourthsPayment = ((disputedBook.bookBondAmount * 2) / 4) *
-            3;
+        uint256 totalBond = (disputedBook.bookBondAmount * 2);
+        uint256 reward = (totalBond * settlePercentage) / 100;
         address recipient = isPassed
             ? disputedBook.proposer
             : disputedBook.disputer;
         _transferTo(
             recipient,
-            threeFourthsPayment,
+            reward,
             isPassed ? "Settled Pay Proposer" : "Settled Pay Disputer"
         );
         if (isPassed) {
@@ -177,14 +233,22 @@ contract AlexandriaV1 is ReentrancyGuard {
         } else {
             data.removeFromDisputeDictionary(bookId, disputedBook);
         }
+
+        treasuryBalance += totalBond - reward;
+        bondBalance -= totalBond;
     }
 
     /// @notice Mints a page as an ERC1155 NFT
     function mintPage() external payable nonReentrant {
-        PayoutDetail memory payout = mint.mintPage(msg.sender);
+        (PayoutDetail memory payout, uint256 bookId) = mint.mintPage(
+            msg.sender
+        );
+        emit CustomEvent1(payout, bookId);
         _handleMintPayment(payout.proposer, payout.paymentAmount);
-        treasuryBalance += payout.paymentAmount;
-        bondBalance -= payout.paymentAmount;
+        if (!wasDisputed[bookId]) {
+            treasuryBalance += payout.paymentAmount;
+            bondBalance -= payout.paymentAmount;
+        }
     }
 
     /// @notice Claims and burns a token, allowing the holder to claim its backing value.
@@ -193,6 +257,7 @@ contract AlexandriaV1 is ReentrancyGuard {
         uint256 backing = backingPerToken();
         mint.burnTokens(msg.sender, tokenId, 1);
         _transferTo(msg.sender, backing, "Rage Quit!");
+        treasuryBalance -= backing;
         emit PageBurned(tokenId, msg.sender, backing);
     }
 
@@ -225,6 +290,13 @@ contract AlexandriaV1 is ReentrancyGuard {
     }
 
     // Internal functions
+    function _handleSlashedBonds(uint256 slashedBonds) internal {
+        uint256 slasherReward = (slashedBonds * slashPercentage) / 100;
+        _transferTo(msg.sender, slasherReward, "Reserved Pages Slashed Reward");
+        bondBalance -= slashedBonds;
+        treasuryBalance += (slashedBonds - slasherReward);
+    }
+
     function _handleBondPayment(uint256 _bookBondAmount) internal {
         _processPayment(_bookBondAmount, "Bond Refund");
         bondBalance += _bookBondAmount;
@@ -236,13 +308,10 @@ contract AlexandriaV1 is ReentrancyGuard {
     ) internal {
         uint256 totalPayout = _paymentAmount +
             ((_paymentAmount * bonusPercentage) / 100);
+        emit CustomEvent(_proposer, totalPayout);
 
         if (_proposer == msg.sender) {
-            // If the proposer is the minter, there is no payment required.
-            // Refund if they sent payment.
-            if (msg.value > 0) {
-                _refund(msg.sender, msg.value, "Mint Refund");
-            }
+            _processPayment(0, "Mint Refund");
         } else {
             _processPayment(totalPayout, "Mint Refund");
             _transferTo(_proposer, totalPayout, "Mint Pay Proposer");
@@ -253,16 +322,14 @@ contract AlexandriaV1 is ReentrancyGuard {
         uint256 _requiredAmount,
         string memory paymentType
     ) internal {
-        if (msg.value < _requiredAmount) {
+        if (msg.value > _requiredAmount) {
+            uint256 refundAmount = msg.value - _requiredAmount;
+            _refund(msg.sender, refundAmount, paymentType);
+        } else if (msg.value < _requiredAmount) {
             revert PaymentError({
                 sentAmount: msg.value,
                 requiredAmount: _requiredAmount
             });
-        }
-
-        uint256 refundAmount = msg.value - _requiredAmount;
-        if (refundAmount > 0) {
-            _refund(msg.sender, refundAmount, paymentType);
         }
     }
 
@@ -288,7 +355,8 @@ contract AlexandriaV1 is ReentrancyGuard {
         uint256 amount,
         string memory paymentType
     ) internal {
-        payable(recipient).transfer(amount);
+        (bool success, ) = payable(recipient).call{value: amount}("");
+        if (!success) revert TransferFailed();
         emit PaymentProcessed(
             address(this),
             recipient,

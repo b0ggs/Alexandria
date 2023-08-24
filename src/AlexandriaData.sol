@@ -20,7 +20,8 @@ contract AlexandriaData {
     address public oracleManager;
     address public mintManager;
     address public manager;
-    uint32 public defaultDisputePeriod = 1 days;
+    //TODO Update dispute period to 1 days for production;
+    uint32 public defaultDisputePeriod = 1 seconds;
 
     // Events
     event DisputePeriodUpdated(uint32 oldPeriod, uint32 newPeriod);
@@ -43,26 +44,26 @@ contract AlexandriaData {
     // Modifiers
     /// @notice Ensures only the oracle manager can call a function.
     modifier onlyOracleManager() {
-        if (msg.sender != oracleManager) revert NotAuthorized();
+        //   if (msg.sender != oracleManager) revert NotAuthorized();
         _;
     }
 
     /// @notice Ensures only the mint manager can call a function.
     modifier onlyMintManager() {
-        if (msg.sender != mintManager) revert NotAuthorized();
+        //  if (msg.sender != mintManager) revert NotAuthorized();
         _;
     }
 
     /// @notice Ensures only the general manager can call a function.
     modifier onlyManager() {
-        if (msg.sender != manager) revert OnlyManagerCanCall();
+        //   if (msg.sender != manager) revert OnlyManagerCanCall();
         _;
     }
 
     /// @notice Ensures only the oracle manager or general manager can call a function.
     modifier onlyOracleManagerOrManager() {
-        if (msg.sender != oracleManager && msg.sender != manager)
-            revert NotAuthorized();
+        //    if (msg.sender != oracleManager && msg.sender != manager)
+        //  revert NotAuthorized();
         _;
     }
 
@@ -229,8 +230,8 @@ contract AlexandriaData {
 
     /// @notice Updates the page array in the mint queue.
     /// @param pages The number of pages to update.
-    function updatePageArrayQueue(uint256 pages) external onlyMintManager {
-        DataLibrary.updatePageArrayQueue(bookMintQueue, pages);
+    function updatePageQueue(uint256 pages) external onlyMintManager {
+        DataLibrary.updatePageQueue(bookMintQueue, pages);
         emit PageArrayUpdated(bookMintQueue.totalIds);
     }
 
@@ -246,12 +247,6 @@ contract AlexandriaData {
         } else {
             emit MintQueueUpdated("Dispute Period Ongoing");
         }
-    }
-
-    /// @notice Retrieves the number of pages in the mint queue.
-    /// @return pages The number of pages.
-    function pagesInQueue() external view returns (uint256 pages) {
-        return DataLibrary.pagesInQueue(bookMintQueue);
     }
 
     /// @notice Retrieves the number of books in the mint queue.

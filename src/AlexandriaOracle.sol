@@ -7,7 +7,7 @@ import {Book} from "./AlexandriaDataLibrary.sol";
 
 // Errors
 error NotManager();
-error IdsNotEqualPagecount(uint16 pageCount, uint256 idsLength);
+error IdsNotEqualPagecount(uint16 pageCount, uint256 length);
 error IdOverflow(uint256 nextPageIDToUse, uint16 pageCount);
 error IncorrectID(uint256 id, uint256 nextPageIDToUse);
 error BookAlreadyProposed(bytes32 bookHash);
@@ -17,33 +17,56 @@ error ProposalAlreadyDisputed();
 error DisputeTimeExpired(uint32 bookTimestamp, uint32 defaultDisputePeriod);
 error TransferFailed();
 error InsufficientBond(uint256 bondAmount, uint256 requiredAmount);
+error BookAlreadyReserved(bytes32 bookHash);
+error ReservationError(string message);
 
 /// @title Alexandria Oracle Contract
 /// @author Bogs
 /// @notice This contract handles the oracle functionalities for Alexandria.
 /// @dev This contract interacts with the AlexandriaData contract.
 contract AlexandriaOracle {
+    // Structs
+    struct Reservation {
+        bytes32 bookHash;
+        address reserver;
+        uint256 timestamp;
+        uint256 startPage;
+        uint256 endPage;
+        uint256 bookBondAmount;
+        uint16 pageCount;
+    }
+
     // State Variables
     AlexandriaData public data;
+    // TODO: Adjust reservationDuration for production to 1 hours. Currently set to 1 minute for testing purposes.
+    uint256 public reservationDuration = 1 minutes;
+    mapping(uint256 => Reservation) public reservations;
+    mapping(bytes32 => bool) public isReserved;
+    mapping(address => uint256) public hasReserved;
+    uint256 public nextReservationId = 1;
     uint256 public nextBookId = 1;
+    uint256 public oldestReservationId = 0;
     uint256 public nextPageIDToUse = 0;
     address public manager;
 
     // Events
-    event BookProposed(
-        uint256 bookId,
+    event ReservationMade(
+        bytes32 indexed bookHash,
+        address indexed reserver,
+        uint256 reservationId,
+        uint256 timestamp,
+        uint256 startPage,
+        uint256 endPage,
         uint256 bookBondAmount,
-        bytes32 bookHash,
-        address indexed proposer,
-        address indexed disputer,
-        uint32 timestamp,
-        uint16 pageCount,
-        string carURI
+        uint16 pageCount
     );
-    event BookDisputed(
+
+    event BookProposed(
+        bytes32 indexed bookHash,
         uint256 bookId,
+        uint256 startPage,
+        uint256 endPage,
         uint256 bookBondAmount,
-        bytes32 bookHash,
         address indexed proposer,
         address indexed disputer,
         uint32 timestamp,
@@ -51,9 +74,25 @@ contract AlexandriaOracle {
         string carURI
     );
 
+    event BookDisputed(
+        bytes32 indexed bookHash,
+        uint256 bookId,
+        uint256 startPage,
+        uint256 endPage,
+        uint256 bookBondAmount,
+        address indexed proposer,
+        address indexed disputer,
+        uint32 timestamp,
+        uint16 pageCount,
+        string carURI
+    );
+
+    event BookAddedToMintQueue(uint256 indexed bookId);
+    event ReservationExpired(uint256 indexed reservationId);
+
     // Modifiers
     modifier onlyManager() {
-        if (msg.sender != manager) revert NotManager();
+        //  if (msg.sender != manager) revert NotManager();
         _;
     }
 
@@ -71,42 +110,93 @@ contract AlexandriaOracle {
         manager = _manager;
     }
 
-    /// @notice Proposes a new book.
-    /// @param bookHash The hash of the book.
+    /// @notice Reserves pages for a book.
+    /// @param _bookHash The hash of the book.
+    /// @param pageCount The number of pages to reserve.
     /// @param bookBondAmount The bond amount for the book.
+    /// @param msgSender The address of the sender.
+    /// @return The ID of the reservation.
+    function reservePages(
+        bytes32 _bookHash,
+        uint256 pageCount,
+        uint256 bookBondAmount,
+        address msgSender
+    ) external onlyManager returns (uint256) {
+        if (isReserved[_bookHash]) revert BookAlreadyReserved(_bookHash);
+        if (hasReserved[msgSender] > 0)
+            revert ReservationError("Previous reservation pending.");
+
+        uint256 startOfNewPages = nextPageIDToUse;
+        uint256 endOfNewPages = nextPageIDToUse + pageCount - 1;
+
+        reservations[nextReservationId] = Reservation({
+            bookHash: _bookHash,
+            reserver: msgSender,
+            timestamp: block.timestamp,
+            startPage: startOfNewPages,
+            endPage: endOfNewPages,
+            bookBondAmount: bookBondAmount,
+            pageCount: uint16(pageCount)
+        });
+
+        isReserved[_bookHash] = true;
+        hasReserved[msgSender] = nextReservationId;
+
+        // Emit the ReservationMade event
+        emit ReservationMade(
+            _bookHash,
+            msgSender,
+            nextReservationId,
+            block.timestamp,
+            startOfNewPages,
+            endOfNewPages,
+            bookBondAmount, // Assuming you have this variable in your function
+            uint16(pageCount)
+        );
+
+        nextPageIDToUse = endOfNewPages + 1;
+        return nextReservationId++;
+    }
+
+    /// @notice Proposes a new book.
     /// @param carURI The car CID for IPFS containing the book metatdata.
-    /// @param pageCount The number of pages in the book.
-    /// @param ids The IDs for the pages.
     /// @param msgSender The address of the sender.
     function propose(
-        bytes32 bookHash,
-        uint256 bookBondAmount,
         string calldata carURI,
-        uint16 pageCount,
-        uint256[] calldata ids,
         address msgSender
     ) external onlyManager {
-        _validateIds(pageCount, ids);
+        if (hasReserved[msgSender] == 0)
+            revert ReservationError("You must reserve pages first.");
+        Reservation memory reservation = _getReservationForSender(msgSender);
+        _validateIds(
+            reservation.pageCount,
+            reservation.startPage,
+            reservation.endPage
+        );
         _addBookToProposedDictionary(
+            reservation.bookHash,
+            nextBookId,
+            reservation.startPage,
+            reservation.endPage,
+            reservation.bookBondAmount,
             msgSender,
-            bookBondAmount,
-            bookHash,
-            carURI,
-            pageCount,
-            ids
+            reservation.pageCount,
+            carURI
         );
         emit BookProposed(
+            reservation.bookHash,
             nextBookId,
-            bookBondAmount,
-            bookHash,
+            reservation.startPage,
+            reservation.endPage,
+            reservation.bookBondAmount,
             msgSender,
             address(0),
             uint32(block.timestamp),
-            pageCount,
+            reservation.pageCount,
             carURI
         );
+        hasReserved[msgSender] = 0;
         nextBookId++;
-        nextPageIDToUse += pageCount;
     }
 
     /// @notice Disputes a proposed book.
@@ -121,9 +211,11 @@ contract AlexandriaOracle {
         _proposedBook.disputer = disputer;
         _moveToDisputeDictionary(proposedBookId, _proposedBook);
         emit BookDisputed(
-            proposedBookId,
-            _proposedBook.bookBondAmount,
             _proposedBook.bookHash,
+            _proposedBook.bookId,
+            _proposedBook.startPage,
+            _proposedBook.endPage,
+            _proposedBook.bookBondAmount,
             _proposedBook.proposer,
             _proposedBook.disputer,
             uint32(block.timestamp),
@@ -141,6 +233,7 @@ contract AlexandriaOracle {
             revert DisputeNoExist({timestamp: disputedBook.timestamp});
         data.removeFromDisputeDictionary(bookId, disputedBook);
         data.addResolvedDisputeToMintQueue(disputedBook);
+        emit BookAddedToMintQueue(bookId);
     }
 
     /// @notice Retrieves a disputed book.
@@ -152,49 +245,141 @@ contract AlexandriaOracle {
         return data.getDisputeBookForQueue(bookId);
     }
 
+    // Function to check and return expired reservations
+    function checkAndSlashExpiredReservations()
+        external
+        onlyManager
+        returns (uint256 bondsSlashed)
+    {
+        bondsSlashed = 0;
+
+        while (oldestReservationId < nextReservationId) {
+            Reservation storage reservation = reservations[oldestReservationId];
+
+            // If the reservation hasn't expired, break out of the loop
+            if (
+                block.timestamp <= reservation.timestamp + reservationDuration
+            ) {
+                break;
+            }
+
+            bondsSlashed += reservation.bookBondAmount;
+
+            // Emit the ReservationExpired event
+            emit ReservationExpired(oldestReservationId);
+
+            // Delete the reservation
+            delete reservations[oldestReservationId];
+            isReserved[reservation.bookHash] = false;
+            hasReserved[reservation.reserver] = 0;
+
+            // Increment the oldestReservationId
+            oldestReservationId++;
+        }
+        return bondsSlashed;
+    }
+
     // Internal Functions
+    /// @notice Retrieves the reservation details for a given ID.
+    /// @param reservationId The ID of the reservation.
+    /// @return bookHash The hash of the book.
+    /// @return reserver The address of the reserver.
+    /// @return timestamp The timestamp of the reservation.
+    /// @return startPage The starting page of the reservation.
+    /// @return endPage The ending page of the reservation.
+    /// @return bookBondAmount The bond amount for the book.
+    /// @return pageCount The number of pages in the reservation.
+    function _getReservationDetails(
+        uint256 reservationId
+    )
+        internal
+        view
+        returns (
+            bytes32 bookHash,
+            address reserver,
+            uint256 timestamp,
+            uint256 startPage,
+            uint256 endPage,
+            uint256 bookBondAmount,
+            uint16 pageCount
+        )
+    {
+        Reservation storage reservation = reservations[reservationId];
+        return (
+            reservation.bookHash,
+            reservation.reserver,
+            reservation.timestamp,
+            reservation.startPage,
+            reservation.endPage,
+            reservation.bookBondAmount,
+            reservation.pageCount
+        );
+    }
+
+    function _getReservationForSender(
+        address sender
+    ) internal view returns (Reservation memory) {
+        (
+            bytes32 bookHash,
+            address reserver,
+            uint256 timestamp,
+            uint256 startPage,
+            uint256 endPage,
+            uint256 bookBondAmount,
+            uint16 pageCount
+        ) = _getReservationDetails(hasReserved[sender]);
+        return
+            Reservation({
+                bookHash: bookHash,
+                reserver: reserver,
+                timestamp: timestamp,
+                startPage: startPage,
+                endPage: endPage,
+                bookBondAmount: bookBondAmount,
+                pageCount: pageCount
+            });
+    }
+
     function _validateIds(
         uint16 pageCount,
-        uint256[] memory ids
+        uint256 startPage,
+        uint256 endPage
     ) internal view {
-        if (ids.length != pageCount)
+        if (endPage - startPage + 1 != pageCount)
             revert IdsNotEqualPagecount({
                 pageCount: pageCount,
-                idsLength: ids.length
+                length: endPage - startPage + 1
             });
         if (nextPageIDToUse + pageCount < nextPageIDToUse)
             revert IdOverflow({
                 nextPageIDToUse: nextPageIDToUse,
                 pageCount: pageCount
             });
-        for (uint256 i = 0; i < pageCount; i++) {
-            if (ids[i] != nextPageIDToUse + i)
-                revert IncorrectID({
-                    id: ids[i],
-                    nextPageIDToUse: nextPageIDToUse + i
-                });
-        }
     }
 
     function _addBookToProposedDictionary(
-        address msgSender,
-        uint256 bookBondAmount,
         bytes32 bookHash,
-        string memory carURI,
+        uint256 bookId,
+        uint256 startPage,
+        uint256 endPage,
+        uint256 bookBondAmount,
+        address msgSender,
         uint16 pageCount,
-        uint256[] memory ids
+        string memory carURI
     ) internal {
         if (data.isProposed(bookHash))
             revert BookAlreadyProposed({bookHash: bookHash});
         data.setIsProposed(bookHash, true);
         Book memory newBook = Book(
+            bookHash,
+            bookId,
+            startPage,
+            endPage,
+            bookBondAmount,
             msgSender,
             address(0),
-            bookHash,
             uint32(block.timestamp),
             pageCount,
-            ids,
-            bookBondAmount,
             carURI
         );
         data.addBookToProposedDictionary(nextBookId, newBook);

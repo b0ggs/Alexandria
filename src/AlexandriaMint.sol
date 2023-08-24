@@ -32,7 +32,7 @@ contract AlexandriaMint is ERC1155, ERC1155Supply {
 
     // Modifiers
     modifier onlyManager() {
-        if (msg.sender != manager) revert NotManager();
+        //  if (msg.sender != manager) revert NotManager();
         _;
     }
 
@@ -62,34 +62,34 @@ contract AlexandriaMint is ERC1155, ERC1155Supply {
     /// @return Payout details for the minted page.
     function mintPage(
         address recipient
-    ) external onlyManager returns (PayoutDetail memory) {
+    ) external onlyManager returns (PayoutDetail memory, uint256 bookID) {
         if (data.getPagesInMintQueue() == 0) revert NoPagesInQueue();
         Book memory _mintBook = data.getMintBook();
 
-        if (exists(_mintBook.ids[0]))
-            revert NFTMintedWithCurrentID({id: _mintBook.ids[0]});
+        if (exists(_mintBook.startPage))
+            revert NFTMintedWithCurrentID({id: _mintBook.startPage});
 
         PayoutDetail memory payout = PayoutDetail({
             proposer: _mintBook.proposer,
             paymentAmount: _mintBook.bookBondAmount / _mintBook.pageCount
         });
 
-        _mint(recipient, _mintBook.ids[0], 1, "");
-        _setTokenUri(_mintBook.ids[0], _mintBook.carURI);
+        _mint(recipient, _mintBook.startPage, 1, "");
+        _setTokenUri(_mintBook.startPage, _mintBook.carURI);
 
-        data.updatePageArrayQueue(1);
+        data.updatePageQueue(1);
         data.updateMintQueue();
 
         totalNFTs += 1;
 
         emit PageMinted(
-            _mintBook.ids[0],
+            _mintBook.startPage,
             recipient,
             uint32(block.timestamp),
             _mintBook.carURI
         );
 
-        return payout;
+        return (payout, _mintBook.bookId);
     }
 
     /// @notice Burns a specific amount of tokens from a given address.
@@ -102,6 +102,7 @@ contract AlexandriaMint is ERC1155, ERC1155Supply {
         uint256 amount
     ) external onlyManager {
         _burn(account, tokenId, amount);
+        totalNFTs -= 1;
     }
 
     //internal functions
