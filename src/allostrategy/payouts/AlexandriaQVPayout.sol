@@ -61,7 +61,7 @@ contract AlexandriaQVPayout is IAlexandriaPayoutStrategy {
         address project,
         uint256 donateAndMintAmount
     ) external onlyAlexandriaStrategy {
-        uint256 actualDonation = donateAndMintAmount.sub(mintCost);
+        uint256 actualDonation = donateAndMintAmount - mintCost;
         uint256 netVotes = _calculateNetVotes(actualDonation);
         _updateVotes(project, netVotes);
     }
@@ -106,7 +106,7 @@ contract AlexandriaQVPayout is IAlexandriaPayoutStrategy {
         uint256[] memory amounts = new uint256[](recipients.length);
 
         for (uint256 i = 0; i < recipients.length; i++) {
-            totalVotes = totalVotes.add(votes[recipients[i]]);
+            totalVotes = totalVotes + votes[recipients[i]];
         }
 
         require(totalVotes > 0, "Total votes should be greater than zero");
@@ -128,7 +128,7 @@ contract AlexandriaQVPayout is IAlexandriaPayoutStrategy {
     /// @param project Address of the project to update votes for
     /// @param netVotes Number of net votes to add for the project
     function _updateVotes(address project, uint256 netVotes) internal {
-        votes[project] = votes[project].add(netVotes);
+        votes[project] = votes[project] + netVotes;
     }
 
     /// @dev Calculates the net votes based on a donation amount
