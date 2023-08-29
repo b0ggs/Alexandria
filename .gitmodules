@@ -7,3 +7,6 @@
 [submodule "lib/solady"]
 	path = lib/solady
 	url = https://github.com/vectorized/solady
+[submodule "lib/allo-v2"]
+	path = lib/allo-v2
+	url = https://github.com/allo-protocol/allo-v2
