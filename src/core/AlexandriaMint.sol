@@ -1,9 +1,12 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.7;
+pragma solidity ^0.8.19;
 
+// Internal Libraries
+import {AlexandriaData, Book, PayoutDetail} from "./AlexandriaData.sol";
+
+// External Libraries
 import {ERC1155} from "@openzeppelin/contracts/token/ERC1155/ERC1155.sol";
 import {ERC1155Supply} from "@openzeppelin/contracts/token/ERC1155/extensions/ERC1155Supply.sol";
-import {AlexandriaData, Book, PayoutDetail} from "./AlexandriaData.sol";
 
 // Errors
 error NotManager();
@@ -16,13 +19,21 @@ error UriAlreadySet();
 /// @notice This contract handles the minting functionalities for Alexandria.
 /// @dev This contract interacts with the AlexandriaData contract.
 contract AlexandriaMint is ERC1155, ERC1155Supply {
-    // State Variables
+    // ========================
+    // ==== State Variables ===
+    // ========================
+
     AlexandriaData public data;
     address public manager;
+    string public constant name = "Alexandria";
+    string public constant symbol = "PAGE";
     mapping(uint256 => string) public _uris;
     uint256 public totalNFTs = 0;
 
-    // Events
+    /// ======================
+    /// ======= Events =======
+    /// ======================
+
     event PageMinted(
         uint256 tokenId,
         address indexed recipient,
@@ -30,12 +41,19 @@ contract AlexandriaMint is ERC1155, ERC1155Supply {
         string carURI
     );
 
-    // Modifiers
+    /// ====================================
+    /// =========== Modifiers ==============
+    /// ====================================
+
     //TODO add modifiers after testing
     modifier onlyManager() {
         //  if (msg.sender != manager) revert NotManager();
         _;
     }
+
+    /// ====================================
+    /// ========== Constructor =============
+    /// ====================================
 
     /// @notice Initializes the contract with the address of the AlexandriaData contract.
     /// @param _dataAddress The address of the AlexandriaData contract.
@@ -44,13 +62,9 @@ contract AlexandriaMint is ERC1155, ERC1155Supply {
         manager = msg.sender;
     }
 
-    /// @notice Returns the URI for a given token ID.
-    /// @dev    Overrides the ERC1155 implementation
-    /// @param tokenId The ID of the token to query.
-    /// @return The URI of the token.
-    function uri(uint256 tokenId) public view override returns (string memory) {
-        return (_uris[tokenId]);
-    }
+    /// ========================
+    /// ======= External =======
+    /// ========================
 
     /// @notice Sets the manager of the contract.
     /// @param _manager The address of the new manager.
@@ -60,7 +74,7 @@ contract AlexandriaMint is ERC1155, ERC1155Supply {
 
     /// @notice Mints a single page.
     /// @param recipient The address to receive the minted page.
-    /// @return Payout details for the minted page.
+    /// @return Payout details for the minted page and the book ID associated with the minted page.
     function mintPage(
         address recipient
     ) external onlyManager returns (PayoutDetail memory, uint256 bookID) {
@@ -105,12 +119,37 @@ contract AlexandriaMint is ERC1155, ERC1155Supply {
         totalNFTs -= 1;
     }
 
-    //internal functions
+    /// ======================
+    /// ======= Public =======
+    /// ======================
+
+    /// @notice Returns the URI for a given token ID.
+    /// @dev Overrides the ERC1155 implementation.
+    /// @param tokenId The ID of the token to query.
+    /// @return The URI of the token.
+    function uri(uint256 tokenId) public view override returns (string memory) {
+        return (_uris[tokenId]);
+    }
+
+    /// ====================================
+    /// ============ Internal ==============
+    /// ====================================
+
+    /// @notice Sets the URI for a given token ID.
+    /// @param tokenId The ID of the token.
+    /// @param _carURI The URI to set for the token.
     function _setTokenUri(uint256 tokenId, string memory _carURI) internal {
         if (bytes(_uris[tokenId]).length != 0) revert UriAlreadySet();
         _uris[tokenId] = _carURI;
     }
 
+    /// @notice Hook that is called before any token transfer, including mints and burns.
+    /// @param operator The address performing the function call.
+    /// @param from The address tokens are being transferred from.
+    /// @param to The address tokens are being transferred to.
+    /// @param ids An array of token IDs being transferred.
+    /// @param amounts An array of the amounts of tokens being transferred.
+    /// @param _data Additional data with no specified format.
     function _beforeTokenTransfer(
         address operator,
         address from,

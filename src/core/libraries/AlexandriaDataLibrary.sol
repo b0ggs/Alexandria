@@ -9,17 +9,17 @@ error BookDoesNotExist(string message, uint256 bookId);
 
 /// @dev Struct representing a book with its details.
 struct Book {
-    bytes32 bookHash;        
+    bytes32 bookHash;
     uint256 bookId;
-    uint256 startPage;       
-    uint256 endPage;         
-    uint256 bookBondAmount;  
-    address proposer;        
-    address disputer;        
-    uint32 timestamp;        
-    uint16 pageCount;        
-    string carURI; 
-    string bookURL;          
+    uint256 startPage;
+    uint256 endPage;
+    uint256 bookBondAmount;
+    address proposer;
+    address disputer;
+    uint32 timestamp;
+    uint16 pageCount;
+    string carURI;
+    string bookURL;
 }
 
 /// @dev Struct representing payout details.
@@ -33,7 +33,6 @@ struct PayoutDetail {
 /// @notice This library provides functionality for managing books and queues of Alexandria
 /// @dev This library is used in conjunction with AlexandriaData, AlexandriaMint, AlexandriaOracle, AlexandriaV1.
 library DataLibrary {
-
     /// ========================
     /// ==== State Structs =====
     /// ========================
@@ -62,7 +61,7 @@ library DataLibrary {
     /// @param _value The book to be added.
     function addToQueue(QueueState storage state, Book memory _value) public {
         state.queue[state.tail] = _value;
-        state.totalIds += _value.pageCount;  // Adjusted to use pageCount
+        state.totalIds += _value.pageCount; // Adjusted to use pageCount
         state.tail++;
     }
 
@@ -97,9 +96,12 @@ library DataLibrary {
     /// @notice Updates the page array in the queue.
     /// @param state The current state of the queue.
     /// @param pagesToRemove The number of pages to remove.
-    function updatePageQueue(QueueState storage state, uint256 pagesToRemove) public {
+    function updatePageQueue(
+        QueueState storage state,
+        uint256 pagesToRemove
+    ) public {
         Book storage currentBook = state.queue[state.head];
-        
+
         // Check if there are enough pages to remove
         if (currentBook.endPage - currentBook.startPage + 1 < pagesToRemove) {
             revert NotEnoughPagesInBook();

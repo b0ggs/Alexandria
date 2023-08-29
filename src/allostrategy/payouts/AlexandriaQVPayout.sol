@@ -5,7 +5,7 @@ pragma solidity ^0.8.19;
 import "../interfaces/IAlexandriaPayoutStrategy.sol";
 
 // Internal Libraries
-import "contracts/core/AlexandriaV1.sol";
+import "../../core/AlexandriaV1.sol";
 
 /// @title Alexandria Quadratic Voting Payout Strategy
 /// @author b0gs

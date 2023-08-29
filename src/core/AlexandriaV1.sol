@@ -1,30 +1,22 @@
-// Check Reentrancy for payments
-// Fix manager roles for Mint and Oracle
-//NOTE update book queue on calls
-// View function to view all managers and other contracts?
+//// TODO: Remove Hashes for testing
 //// 0x3fd54831f488a22b28398de0c567a3b064b937f54f81739ae9bd545967f3ab1a
 //// 0x3fd54831f488a22b28398de0c567a3b064b937f54f81739ae9bd545967f3ab1b
 //// 0x3fd54831f488a22b28398de0c567a3b064b937f54f81739ae9bd545967f3ab1c
 //// 0x3fd54831f488a22b28398de0c567a3b064b937f54f81739ae9bd545967f3ab1d
 //// 0x3fd54831f488a22b28398de0c567a3b064b937f54f81739ae9bd545967f3ab1e
 //// 0x3fd54831f488a22b28398de0c567a3b064b937f54f81739ae9bd545967f3ab1f
-
-//0x3fd54831f588a22b28398df0c567a3b064b937f54f81739ae9bd545967f3abae
-// Move bondBalance, totalBond, Etc. to this contract
-// Have this contract handle all ETH and payments. Remove from mint.
-
-//TODO
-// Test adding books from propose to mintqueue without a dispute
-// checkAndSlash one reservation then three
-// dispute re
+////0x3fd54831f588a22b28398df0c567a3b064b937f54f81739ae9bd545967f3abae
 
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.7;
+pragma solidity ^0.8.19;
 
-import {ReentrancyGuard} from "@openzeppelin/contracts/security/ReentrancyGuard.sol";
+//Internal Libraries
 import {AlexandriaData, Book, PayoutDetail} from "./AlexandriaData.sol";
 import {AlexandriaOracle} from "./AlexandriaOracle.sol";
 import {AlexandriaMint} from "./AlexandriaMint.sol";
+
+// External Libraries
+import {ReentrancyGuard} from "@openzeppelin/contracts/security/ReentrancyGuard.sol";
 
 // Errors
 error NotManager();
@@ -37,12 +29,16 @@ error ExceedsTreasuryBalance(uint256 requestedAmount, uint256 currentBalance);
 /// @notice This contract integrates AlexandriaData, AlexandriaOracle, and AlexandriaMint.
 /// @dev This is the main contract for the Alexandria protocol.
 contract AlexandriaV1 is ReentrancyGuard {
-    // State variables
+    // ========================
+    // ==== State Variables ===
+    // ========================
+
     AlexandriaData public data;
     AlexandriaOracle public oracle;
     AlexandriaMint public mint;
     mapping(uint256 => bool) public wasDisputed;
     address public manager;
+    address public AlexandriaAllo;
     uint256 public treasuryBalance = 0;
     uint256 public bondBalance = 0;
     uint128 public proposeBond = 0.001 ether;
@@ -50,11 +46,10 @@ contract AlexandriaV1 is ReentrancyGuard {
     uint8 public slashPercentage = 25;
     uint8 public settlePercentage = 75; // orcle dispute reward
 
-    //TODO remove Debug Events
-    event CustomEvent(address proposer, uint256 payout);
-    event CustomEvent1(PayoutDetail payout, uint256 bookID);
+    /// ======================
+    /// ======= Events =======
+    /// ======================
 
-    // Events
     event BonusPercentageUpdated(uint8 oldPercentage, uint8 newPercentage);
     event ProposeBondUpdated(uint128 oldBond, uint128 newBond);
     event PageBurned(
@@ -71,13 +66,24 @@ contract AlexandriaV1 is ReentrancyGuard {
         string paymentType
     );
 
-    // Modifiers
-    //TODO add modifiers after testing
+    /// ====================================
+    /// =========== Modifiers ==============
+    /// ====================================
 
+    //TODO add modifiers after testing
     modifier onlyManager() {
         //    if (msg.sender != manager) revert NotManager();
         _;
     }
+
+    modifier onlyAllo() {
+        //    if (msg.sender != AlexandriaAllo) revert NotManager();
+        _;
+    }
+
+    /// ====================================
+    /// ========== Constructor =============
+    /// ====================================
 
     /// @notice Initializes the contract with the provided addresses for data, oracle, and mint contracts.
     /// @param _dataAddress The address of the AlexandriaData contract.
@@ -89,30 +95,16 @@ contract AlexandriaV1 is ReentrancyGuard {
         address _mintAddress
     ) {
         manager = msg.sender;
+        AlexandriaAllo = msg.sender;
         data = AlexandriaData(_dataAddress);
         oracle = AlexandriaOracle(_oracleAddress);
         mint = AlexandriaMint(_mintAddress);
     }
 
-    // TODO: erase for production
-    /// @notice Checks the contract's ETH balance against the sum of bondBalance and treasuryBalance.
-    /// @return contractBalance The current ETH balance of the contract.
-    /// @return combinedBalances The sum of bondBalance and treasuryBalance.
-    function checkBalances()
-        public
-        view
-        returns (uint256 contractBalance, uint256 combinedBalances)
-    {
-        contractBalance = address(this).balance;
-        combinedBalances = bondBalance + treasuryBalance;
-        require(
-            contractBalance == combinedBalances,
-            "Inconsistency in balances detected!"
-        );
-        return (contractBalance, combinedBalances);
-    }
+    /// ========================
+    /// ======= External =======
+    /// ========================
 
-    // External functions
     /// @notice Sets a new manager for the contract.
     /// @param _manager The address of the new manager. This should be the governance address.
     function setManager(address _manager) external onlyManager {
@@ -120,10 +112,10 @@ contract AlexandriaV1 is ReentrancyGuard {
     }
 
     /// @notice Moves books from the proposedDictionary to the mintQueue
-    /// It's essential to call this function to insure there are mintable pages
-    ///NOTE proposers should be incentivized to call this because they earn a fee on mints.
-    ///NOTE there needs to be additional testing as to whether this should loop or move 1 book
-    ///NOTE based on the incentives.
+    /// NOTE It's essential to call this function to insure there are mintable pages
+    /// NOTE proposers should be incentivized to call this because they earn a fee on mints.
+    /// NOTE there needs to be additional testing as to whether this should loop or move 1 book
+    /// NOTE based on the incentives.
     function updateMintQueue() external {
         bool continueUpdating = true;
 
@@ -163,7 +155,7 @@ contract AlexandriaV1 is ReentrancyGuard {
     }
 
     /// @notice Updates the bond required to propose.
-    /// @dev DO NOT UPDATE unless logic for backing per a token is implemented for different bond values. (after hackathon)
+    /// @dev DO NOT UPDATE unless logic for backing per a token is implemented for different bond values.
     /// @param newProposeBond The new bond value.
     function updateProposeBond(uint128 newProposeBond) external onlyManager {
         uint128 oldBond = proposeBond;
@@ -185,19 +177,6 @@ contract AlexandriaV1 is ReentrancyGuard {
         treasuryBalance -= amount;
     }
 
-    /// @notice Reserves pages for a given book hash.
-    /// @dev This function also handles the bond payment for the reservation.
-    /// @param bookHash The hash of the book for which pages are being reserved.
-    /// @param pageCount The number of pages to reserve.
-    function reservePages(
-        bytes32 bookHash,
-        uint256 pageCount
-    ) external payable {
-        uint256 totalBookBond = pageCount * proposeBond;
-        oracle.reservePages(bookHash, pageCount, totalBookBond, msg.sender);
-        _handleBondPayment(totalBookBond);
-    }
-
     /// @notice Checks and slashes bonds for expired reservations.
     /// @dev This function also handles the redistribution of slashed bonds.
     function checkAndSlashExpiredReservations() external {
@@ -209,14 +188,6 @@ contract AlexandriaV1 is ReentrancyGuard {
     /// @param carURI CAR CID of the IPFS that holds all JSON data for pages.
     function propose(string calldata carURI) external {
         oracle.propose(carURI, msg.sender);
-    }
-
-    /// @notice Disputes a proposed book.
-    /// @param proposedBookId The ID of the book to dispute.
-    function dispute(uint256 proposedBookId) external payable {
-        uint256 bookBondAmount = oracle.dispute(proposedBookId, msg.sender);
-        _handleBondPayment(bookBondAmount);
-        wasDisputed[proposedBookId] = true;
     }
 
     /// @notice Settles a dispute for a book.
@@ -247,6 +218,38 @@ contract AlexandriaV1 is ReentrancyGuard {
         bondBalance -= totalBond;
     }
 
+    /// @notice Reserves pages for a given book hash.
+    /// @param bookHash The hash of the book for which pages are being reserved.
+    /// @param pageCount The number of pages to reserve.
+    /// @param bookURL The URL of the book.
+    function reservePages(
+        bytes32 bookHash,
+        uint256 pageCount,
+        string calldata bookURL
+    ) external payable nonReentrant {
+        uint256 totalBookBond = pageCount * proposeBond;
+        oracle.reservePages(
+            bookHash,
+            pageCount,
+            totalBookBond,
+            msg.sender,
+            bookURL
+        );
+        _handleBondPayment(totalBookBond);
+    }
+
+    /// ===============================
+    /// ======= External Payable ======
+    /// ===============================
+
+    /// @notice Disputes a proposed book.
+    /// @param proposedBookId The ID of the book to dispute.
+    function dispute(uint256 proposedBookId) external payable nonReentrant {
+        uint256 bookBondAmount = oracle.dispute(proposedBookId, msg.sender);
+        _handleBondPayment(bookBondAmount);
+        wasDisputed[proposedBookId] = true;
+    }
+
     /// @notice Mints a page as an ERC1155 NFT
     function mintPage() external payable nonReentrant {
         (PayoutDetail memory payout, uint256 bookId) = mint.mintPage(
@@ -266,15 +269,30 @@ contract AlexandriaV1 is ReentrancyGuard {
         _handleMintPayment(paymentRecipient, payout.paymentAmount);
     }
 
-    /// @notice Claims and burns a token, allowing the holder to claim its backing value.
-    /// @param tokenId The ID of the token to claim and burn.
-    function claimAndBurn(uint256 tokenId) public nonReentrant {
-        uint256 backing = backingPerToken();
-        mint.burnTokens(msg.sender, tokenId, 1);
-        _transferTo(msg.sender, backing, "Rage Quit!");
-        treasuryBalance -= backing;
-        emit PageBurned(tokenId, msg.sender, backing);
+    /// @notice Mints a page as an ERC1155 NFT on behalf of a donor.
+    /// @dev Only to be used with Allo AlexandriaStrategy
+    /// @param msgSender The address of the donor.
+    function mintPageDonation(
+        address msgSender
+    ) external payable nonReentrant onlyAllo {
+        (PayoutDetail memory payout, uint256 bookId) = mint.mintPage(msgSender);
+
+        address paymentRecipient = !wasDisputed[bookId] ||
+            msgSender == payout.proposer
+            ? payout.proposer
+            : address(this);
+
+        if (!wasDisputed[bookId]) {
+            treasuryBalance += payout.paymentAmount;
+            bondBalance -= payout.paymentAmount;
+        }
+
+        _handleMintPayment(paymentRecipient, payout.paymentAmount);
     }
+
+    /// ============================
+    /// ======= External View ======
+    /// ============================
 
     /// @notice Fetches the URI of a token.
     /// @param tokenId The ID of the token.
@@ -294,7 +312,24 @@ contract AlexandriaV1 is ReentrancyGuard {
         return data.getProposedBookForDispute(_bookId);
     }
 
-    // Public functions
+    /// ======================
+    /// ======= Public =======
+    /// ======================
+
+    /// @notice Claims and burns a token, allowing the holder to claim its backing value.
+    /// @param tokenId The ID of the token to claim and burn.
+    function claimAndBurn(uint256 tokenId) public nonReentrant {
+        uint256 backing = backingPerToken();
+        mint.burnTokens(msg.sender, tokenId, 1);
+        _transferTo(msg.sender, backing, "Rage Quit!");
+        treasuryBalance -= backing;
+        emit PageBurned(tokenId, msg.sender, backing);
+    }
+
+    /// ========================
+    /// ======= Public View =====
+    /// ========================
+
     /// @notice Calculates the backing value per token.
     /// @return The backing value per token.
     function backingPerToken() public view returns (uint256) {
@@ -304,7 +339,12 @@ contract AlexandriaV1 is ReentrancyGuard {
         return treasuryBalance / mint.totalNFTs();
     }
 
-    // Internal functions
+    /// ====================================
+    /// ============ Internal ==============
+    /// ====================================
+
+    /// @notice Handles the redistribution of slashed bonds.
+    /// @param slashedBonds The amount of bonds that were slashed.
     function _handleSlashedBonds(uint256 slashedBonds) internal {
         uint256 slasherReward = (slashedBonds * slashPercentage) / 100;
         _transferTo(msg.sender, slasherReward, "Reserved Pages Slashed Reward");
@@ -312,11 +352,16 @@ contract AlexandriaV1 is ReentrancyGuard {
         treasuryBalance += (slashedBonds - slasherReward);
     }
 
+    /// @notice Processes the bond payment for a given amount.
+    /// @param _bookBondAmount The amount of the bond to be processed.
     function _handleBondPayment(uint256 _bookBondAmount) internal {
         _processPayment(_bookBondAmount, "Bond Refund");
         bondBalance += _bookBondAmount;
     }
 
+    /// @notice Handles the mint payment process.
+    /// @param _proposer The address of the proposer.
+    /// @param _paymentAmount The amount to be paid.
     function _handleMintPayment(
         address _proposer,
         uint256 _paymentAmount
@@ -327,13 +372,16 @@ contract AlexandriaV1 is ReentrancyGuard {
         if (_proposer == msg.sender) {
             _processPayment(0, "Mint Refund");
         } else if (_proposer == address(this)) {
-            _processPayment(totalPayout, "Mint Refund"); // Adjust this line to handle the payment correctly when the contract is the proposer
+            _processPayment(totalPayout, "Mint Refund");
         } else {
             _processPayment(totalPayout, "Mint Refund");
             _transferTo(_proposer, totalPayout, "Mint Pay Proposer");
         }
     }
 
+    /// @notice Processes a payment and ensures the correct amount is sent.
+    /// @param _requiredAmount The required amount for the payment.
+    /// @param paymentType A string describing the type of payment.
     function _processPayment(
         uint256 _requiredAmount,
         string memory paymentType
@@ -349,6 +397,14 @@ contract AlexandriaV1 is ReentrancyGuard {
         }
     }
 
+    /// ====================================
+    /// ======= Internal Payable ===========
+    /// ====================================
+
+    /// @notice Refunds an amount to a given recipient.
+    /// @param recipient The address to receive the refund.
+    /// @param amount The amount to be refunded.
+    /// @param reason A string describing the reason for the refund.
     function _refund(
         address recipient,
         uint256 amount,
@@ -366,6 +422,10 @@ contract AlexandriaV1 is ReentrancyGuard {
         );
     }
 
+    /// @notice Transfers a specified amount to a given recipient.
+    /// @param recipient The address to receive the amount.
+    /// @param amount The amount to be transferred.
+    /// @param paymentType A string describing the type of payment.
     function _transferTo(
         address recipient,
         uint256 amount,

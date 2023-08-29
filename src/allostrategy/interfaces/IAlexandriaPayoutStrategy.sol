@@ -4,7 +4,6 @@ pragma solidity ^0.8.19;
 /// @title IAlexandriaPayoutStrategy Interface
 /// @notice Interface for the Alexandria payout strategy.
 interface IAlexandriaPayoutStrategy {
-    
     /// @notice Calculates the distribution amounts for a list of recipients.
     /// @param recipients List of recipient addresses.
     /// @param totalAmount Total amount to distribute among the recipients.
