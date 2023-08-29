@@ -1,6 +1,6 @@
 //TODO check all requires
 // SPDX-License-Identifier: AGPL-3.0-only
-pragma solidity 0.8.19;
+pragma solidity >=0.8.0 <0.9.0;
 
 // Interfaces
 import {IAllo} from "allo-v2/core/interfaces/IAllo.sol";

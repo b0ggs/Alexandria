@@ -8,7 +8,7 @@
 ////0x3fd54831f588a22b28398df0c567a3b064b937f54f81739ae9bd545967f3abae
 
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.19;
+pragma solidity >=0.8.0 <0.9.0;
 
 //Internal Libraries
 import {AlexandriaData, Book, PayoutDetail} from "./AlexandriaData.sol";
