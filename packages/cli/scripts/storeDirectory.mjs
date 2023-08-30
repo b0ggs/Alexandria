@@ -1,5 +1,8 @@
+import * as dotenv from "dotenv";
 import { NFTStorage } from "nft.storage"
 import { filesFromPaths } from "files-from-path"
+
+dotenv.config()
 
 const NFT_STORAGE_KEY = process.env.NFT_STORAGE_KEY
 

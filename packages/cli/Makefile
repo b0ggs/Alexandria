@@ -29,14 +29,12 @@ reserve-and-propose: hash-pdf create-nft-images store-nft-images write-metadata 
 .PHONY: store-metadata
 store-metadata: $(OUTPUT_DIR)/metadata
 	@echo '***** UPLOAD NFT METADATA TO NFT.STORAGE *****'
-	source .env; \
 	node $(SCRIPTS_DIR)/storeDirectory.mjs $^ 2>&1 | tee $(OUTPUT_DIR)/nft.json
 
 # Write NFT metadata from START_PAGE to END_PAGE
 write-metadata:
 	@echo '***** CREATE NFT METADATA *****'
 	CID=`jq '.cid' $(OUTPUT_DIR)/images.cid`; \
-		source .env; \
 		node $(SCRIPTS_DIR)/buildJsonFiles.mjs "$(DESCRIPTION)" \
 			"$(OUTPUT_PATTERN)" \
 			$(START_PAGE) $(END_PAGE) \
@@ -48,7 +46,7 @@ write-metadata:
 .PHONY: store-nft-images
 store-nft-images:
 	@echo '***** UPLOAD NFTS TO NFT.STORAGE *****'
-	node storeDirectory.mjs $(OUTPUT_DIR)/images 2>&1 | tee $(OUTPUT_DIR)/images.cid
+	node $(SCRIPTS_DIR)/storeDirectory.mjs $(OUTPUT_DIR)/images 2>&1 | tee $(OUTPUT_DIR)/images.cid
 
 # Convert PDF to images from START_PAGE to END_PAGE
 .PHONY: create-images
