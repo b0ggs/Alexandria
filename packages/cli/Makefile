@@ -54,7 +54,7 @@ create-nft-images: $(OUTPUT_DIR)/images
 $(OUTPUT_DIR)/images: $(OUTPUT_DIR)/$(PDF_FILENAME)
 	@echo '***** CREATE NFT IMAGES *****'
 	mkdir -p $@ && \
-		convert $(OUTPUT_DIR)/$(PDF_FILENAME)[$(START_PAGE)-$(END_PAGE)] -density 300 -depth 8 -quality 90 -colorspace RGB $@/$(basename $(PDF_FILENAME))-%04d.webp
+		convert -density 150 $(OUTPUT_DIR)/$(PDF_FILENAME)[$(START_PAGE)-$(END_PAGE)] -quality 100 $@/$(basename $(PDF_FILENAME))-%04d.webp
 
 # Create book hash
 .PHONY: hash-pdf

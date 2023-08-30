@@ -1,74 +1,29 @@
-import { useEffect, useRef, useState } from "react";
-import Marquee from "react-fast-marquee";
+import { useRef, useState } from "react";
 // import { useAccount } from "wagmi";
-import {
-  // useAnimationConfig,
-  // useScaffoldContract,
-  // useScaffoldContractRead,
-  // useScaffoldEventHistory,
-  useScaffoldEventSubscriber,
-} from "~~/hooks/scaffold-eth";
-
-const MARQUEE_PERIOD_IN_SEC = 5;
+import BookEvents from "./BookEvents";
+import type {
+  BookAddedToMintQueueEvent,
+  BookEventsType,
+  DisputeAddedToMintQueueEvent,
+  DisputeEvent,
+  PageBurnedEvent,
+  PageMintedEvent,
+  ProposeEvent,
+  ReservationMadeEvent,
+} from "./EventTypes";
+import { useScaffoldEventSubscriber } from "~~/hooks/scaffold-eth";
 
 export const ContractData = () => {
   // const { address } = useAccount();
-  const [transitionEnabled, setTransitionEnabled] = useState(true);
-  const [isRightDirection, setIsRightDirection] = useState(false);
-  const [marqueeSpeed, setMarqueeSpeed] = useState(0);
-
+  const [bookEvents, setBookEvents] = useState<BookEventsType[]>([]);
   const containerRef = useRef<HTMLDivElement>(null);
-  const greetingRef = useRef<HTMLDivElement>(null);
-
-  const totalCounter = "0";
-  const currentGreeting = "AlexandriaV1";
-  // const { data: bookMintQueue } = useScaffoldContractRead({
-  //   contractName: "AlexandriaData",
-  //   functionName: "bookMintQueue",
-  // });
-
-  // const { data: currentGreeting, isLoading: isGreetingLoading } = useScaffoldContractRead({
-  //   contractName: "YourContract",
-  //   functionName: "greeting",
-  // });
-
-  // useScaffoldEventSubscriber({
-  //   contractName: "AlexandriaData",
-  //   eventName: "MintQueueUpdated",
-  //   listener: logs => {
-  //     logs.map(log => {
-  //       const { message } = log.args;
-  //       console.log("📡 MintQueueUpdated event", message);
-  //     });
-  //   },
-  // });
-
-  // const {
-  //   data: reservationMadeChangeEvents,
-  //   isLoading: isLoadingEvents,
-  //   error: errorReadingEvents,
-  // } = useScaffoldEventHistory({
-  //   contractName: "AlexandriaOracle",
-  //   eventName: "ReservationMade",
-  //   fromBlock: process.env.NEXT_PUBLIC_DEPLOY_BLOCK ? BigInt(process.env.NEXT_PUBLIC_DEPLOY_BLOCK) : 0n,
-  //   filters: { reserver: address },
-  //   blockData: true,
-  // });
-
-  // console.log("Events:", isLoadingEvents, errorReadingEvents, reservationMadeChangeEvents);
-
-  // const {
-  //   data: pageMintedChangeEvents,
-  //   isLoading: isLoadingPageMintedEvents,
-  //   error: errorPageMintedReadingEvents,
-  // } = useScaffoldEventHistory({
-  //   contractName: "AlexandriaMint",
-  //   eventName: "PageMinted",
-  //   fromBlock: process.env.NEXT_PUBLIC_DEPLOY_BLOCK ? BigInt(process.env.NEXT_PUBLIC_DEPLOY_BLOCK) : 0n,
-  //   // filters: { reserver: address },
-  //   blockData: true,
-  // });
-  // console.log("Events:", isLoadingPageMintedEvents, errorPageMintedReadingEvents, pageMintedChangeEvents);
+  const addBookEvent = (evt: BookEventsType) => {
+    setBookEvents(prev => {
+      console.log("Adding evt to bookEvents | size:", prev.length);
+      const newEvents = [...prev, evt];
+      return newEvents;
+    });
+  };
 
   useScaffoldEventSubscriber({
     contractName: "AlexandriaOracle",
@@ -76,6 +31,8 @@ export const ContractData = () => {
     listener: logs => {
       logs.map(log => {
         const { bookHash, startPage, endPage, pageCount, bookURL } = log.args;
+        const evt = { kind: "reservationMade", ...log.args } satisfies ReservationMadeEvent;
+        addBookEvent(evt);
         console.log("📡 ReservationMade event", { bookHash, startPage, endPage, pageCount, bookURL });
       });
     },
@@ -87,6 +44,8 @@ export const ContractData = () => {
     listener: logs => {
       logs.map(log => {
         const { bookHash, bookId, startPage, endPage, bookBondAmount, pageCount, carURI, bookURL } = log.args;
+        const evt = { kind: "propose", ...log.args } satisfies ProposeEvent;
+        addBookEvent(evt);
         console.log("📡 BookProposed event", {
           bookHash,
           bookId,
@@ -102,11 +61,26 @@ export const ContractData = () => {
   });
 
   useScaffoldEventSubscriber({
+    contractName: "AlexandriaOracle",
+    eventName: "BookAddedToMintQueue",
+    listener: logs => {
+      logs.map(log => {
+        const { bookId } = log.args;
+        const evt = { kind: "bookAddedToMintQueue", ...log.args } satisfies BookAddedToMintQueueEvent;
+        addBookEvent(evt);
+        console.log("📡 BookAddedToMintQueue event", { bookId });
+      });
+    },
+  });
+
+  useScaffoldEventSubscriber({
     contractName: "AlexandriaData",
     eventName: "DisputeAddedToMintQueue",
     listener: logs => {
       logs.map(log => {
         const { bookId, disputer, pageCount, carURI } = log.args;
+        const evt = { kind: "disputeAddedToMintQueue", ...log.args } satisfies DisputeAddedToMintQueueEvent;
+        addBookEvent(evt);
         console.log("📡 DisputeAddedToMintQueue event", { bookId, disputer, pageCount, carURI });
       });
     },
@@ -118,6 +92,8 @@ export const ContractData = () => {
     listener: logs => {
       logs.map(log => {
         const { bookHash, bookId, startPage, endPage, bookBondAmount, disputer, pageCount, carURI, bookURL } = log.args;
+        const evt = { kind: "dispute", ...log.args } satisfies DisputeEvent;
+        addBookEvent(evt);
         console.log("📡 DisputeAddedToMintQueue event", {
           bookHash,
           bookId,
@@ -138,66 +114,39 @@ export const ContractData = () => {
     eventName: "PageMinted",
     listener: logs => {
       logs.map(log => {
-        const { tokenId, carURI } = log.args;
-        console.log("📡 PageMinted event", { tokenId, carURI });
+        const { tokenId, carURI, recipient } = log.args;
+        const evt = { kind: "pageMinted", ...log.args } satisfies PageMintedEvent;
+        addBookEvent(evt);
+        console.log("📡 PageMinted event", { tokenId, carURI, recipient });
       });
     },
   });
 
-  // const { data: yourContract } = useScaffoldContract({ contractName: "AlexandriaV1" });
-  // console.log("yourContract: ", yourContract?.address);
-
-  const showAnimation = false;
-  const showTransition = false;
-  // const { showAnimation } = useAnimationConfig()
-  // const { showAnimation } = useAnimationConfig(totalCounter);
-
-  // const showTransition = transitionEnabled && !!currentGreeting && !isGreetingLoading;
-
-  useEffect(() => {
-    if (transitionEnabled && containerRef.current && greetingRef.current) {
-      setMarqueeSpeed(
-        Math.max(greetingRef.current.clientWidth, containerRef.current.clientWidth) / MARQUEE_PERIOD_IN_SEC,
-      );
-    }
-  }, [transitionEnabled, containerRef, greetingRef]);
+  useScaffoldEventSubscriber({
+    contractName: "AlexandriaV1",
+    eventName: "PageBurned",
+    listener: logs => {
+      logs.map(log => {
+        const { tokenId, claimer } = log.args;
+        const evt = { kind: "pageBurned", ...log.args } satisfies PageBurnedEvent;
+        addBookEvent(evt);
+        console.log("📡 PageBurned event", { tokenId, claimer });
+      });
+    },
+  });
 
   return (
-    <div className="flex flex-col justify-center items-center bg-[url('/assets/alexandria.jpg')] bg-[length:100%_100%] py-10 px-5 sm:px-0 lg:py-auto max-w-[100vw] ">
-      <div
-        className={`flex flex-col max-w-4xl bg-base-200 rounded shadow-lg px-5 py-4 w-full ${
-          showAnimation ? "animate-zoom" : ""
-        }`}
-      >
-        <span className="text-4xl">Proposed</span>
-        <div className="flex justify-between w-full">
-          <button
-            className="hidden btn btn-circle btn-ghost relative bg-center bg-[url('/assets/switch-button-on.png')] bg-no-repeat"
-            onClick={() => {
-              setTransitionEnabled(!transitionEnabled);
-            }}
-          >
-            <div
-              className={`absolute inset-0 bg-center bg-no-repeat bg-[url('/assets/switch-button-off.png')] transition-opacity ${
-                transitionEnabled ? "opacity-0" : "opacity-100"
-              }`}
-            />
-          </button>
-          <div className="bg-secondary border border-primary rounded-xl hidden">
-            <div className="p-2 py-1 border-r border-primary flex items-end">Total count</div>
-            <div className="text-4xl text-right min-w-[3rem] px-2 py-1 flex justify-end font-bai-jamjuree">
-              {totalCounter?.toString() || "0"}
-            </div>
-          </div>
-        </div>
+    <div className="flex flex-col items-center bg-[url('/assets/alexandria.jpg')] bg-[length:100%_100%] py-6 px-5 sm:px-0 lg:py-auto max-w-[100vw] ">
+      <div className={`flex flex-col max-w-4xl bg-base-200 rounded shadow-lg px-5 py-4 w-full`}>
+        <span className="text-4xl">History</span>
 
-        <div className="mt-3 border border-primary bg-neutral rounded-xl text-secondary  overflow-hidden whitespace-nowrap w-full uppercase tracking-tighter font-bai-jamjuree leading-tight">
+        <div className="mt-3 border border-primary bg-neutral rounded text-secondary  overflow-hidden whitespace-nowrap w-full uppercase tracking-tighter font-bai-jamjuree leading-tight">
           <div className="relative overflow-x-hidden" ref={containerRef}>
             {/* for speed calculating purposes */}
-            <div className="hidden absolute -left-[9999rem]" ref={greetingRef}>
-              <div className="px-4">{currentGreeting}</div>
+            <div className="flex flex-col items-start max-h-[90%]">
+              <BookEvents events={bookEvents} />
             </div>
-            <table className="w-full table-auto border-collapse border border-slate-400">
+            <table className="hidden w-full table-auto border-collapse border border-slate-400">
               <thead>
                 <tr>
                   <th className="border border-slate-300">Book Hash</th>
@@ -217,42 +166,12 @@ export const ContractData = () => {
                 </tr>
               </tbody>
             </table>
-            {/* {new Array(3).fill("").map((_, i) => {
-              const isLineRightDirection = i % 2 ? isRightDirection : !isRightDirection;
-              return (
-                <Marquee
-                  key={i}
-                  direction={isLineRightDirection ? "right" : "left"}
-                  gradient={false}
-                  play={showTransition}
-                  speed={marqueeSpeed}
-                  className={i % 2 ? "-my-10" : ""}
-                >
-                  <div className="px-4">{currentGreeting || " "}</div>
-                </Marquee>
-              );
-            })} */}
           </div>
         </div>
 
         <div className="mt-3 flex items-end justify-between">
-          <button
-            className={`hidden btn btn-circle btn-ghost border border-primary hover:border-primary w-12 h-12 p-1 bg-neutral flex items-center ${
-              isRightDirection ? "justify-start" : "justify-end"
-            }`}
-            onClick={() => {
-              if (transitionEnabled) {
-                setIsRightDirection(!isRightDirection);
-              }
-            }}
-          >
-            <div className="border border-primary rounded-full bg-secondary w-2 h-2" />
-          </button>
-          <div className="hidden w-44 p-0.5 flex items-center bg-neutral border border-primary rounded-full">
-            <div
-              className="h-1.5 border border-primary rounded-full bg-secondary animate-grow"
-              style={{ animationPlayState: showTransition ? "running" : "paused" }}
-            />
+          <div className="hidden w-44 p-0.5 items-center bg-neutral border border-primary rounded-full">
+            <div className="h-1.5 border border-primary rounded-full bg-secondary animate-grow" />
           </div>
         </div>
       </div>

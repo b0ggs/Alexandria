@@ -11,8 +11,9 @@ export const ContractInteraction = () => {
   const [disputeBookId, setDisputeBookId] = useState(0);
   const [proposeCarUri, setProposeCarUri] = useState("");
   const [reserveCost, setReserveCost] = useState(0);
+  const [claimAndBurnBookId, setClaimAndBurnBookId] = useState(0);
 
-  const { writeAsync, isLoading } = useScaffoldContractWrite({
+  const { writeAsync: writeReserveAsync, isLoading: isReserveLoading } = useScaffoldContractWrite({
     contractName: "AlexandriaV1",
     functionName: "reservePages",
     args: [proposeBookHash, BigNumber.from(proposePageCount).toBigInt(), reserveBookUrl] as readonly [
@@ -22,6 +23,15 @@ export const ContractInteraction = () => {
     ],
     // args: [proposeBookHash, proposePageCount],
     value: reserveCost.toPrecision(18) as `${number}`,
+    onBlockConfirmation: txnReceipt => {
+      console.log("📦 Transaction blockHash", txnReceipt.blockHash);
+    },
+  });
+
+  const { writeAsync: writeClaimAndBurnAsync, isLoading: isClaimAndBurnLoading } = useScaffoldContractWrite({
+    contractName: "AlexandriaV1",
+    functionName: "claimAndBurn",
+    args: [BigNumber.from(claimAndBurnBookId).toBigInt()] as readonly [bigint | undefined],
     onBlockConfirmation: txnReceipt => {
       console.log("📦 Transaction blockHash", txnReceipt.blockHash);
     },
@@ -119,10 +129,10 @@ export const ContractInteraction = () => {
               <div className="flex rounded-full border-2 border-primary p-1">
                 <button
                   className="btn btn-primary rounded-full capitalize font-normal font-white w-24 flex items-center gap-1 hover:gap-2 transition-all tracking-widest"
-                  onClick={() => writeAsync()}
-                  disabled={isLoading}
+                  onClick={() => writeReserveAsync()}
+                  disabled={isReserveLoading}
                 >
-                  {isLoading ? (
+                  {isReserveLoading ? (
                     <span className="loading loading-spinner loading-sm"></span>
                   ) : (
                     <>
@@ -191,6 +201,11 @@ export const ContractInteraction = () => {
 
           <span className="text-4xl sm:text-6xl text-black">Mint Page</span>
           <div className="mt-8 flex flex-col sm:flex-row items-start sm:items-center gap-2 sm:gap-5">
+            <input
+              type="text"
+              className="input invisible font-bai-jamjuree w-full px-5 border border-primary text-lg sm:text-2xl placeholder-gray-500"
+            />
+
             <div className="flex rounded-full border border-primary p-1 flex-shrink-0">
               <div className="flex rounded-full border-2 border-primary p-1">
                 <button
@@ -199,6 +214,33 @@ export const ContractInteraction = () => {
                   disabled={isMintPageLoading}
                 >
                   {isMintPageLoading ? (
+                    <span className="loading loading-spinner loading-sm"></span>
+                  ) : (
+                    <>
+                      Send <ArrowSmallRightIcon className="w-3 h-3 mt-0.5" />
+                    </>
+                  )}
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <span className="text-4xl sm:text-6xl text-black">Claim &#38; Burn</span>
+          <div className="mt-8 flex flex-col sm:flex-row items-start sm:items-center gap-2 sm:gap-5">
+            <input
+              type="text"
+              placeholder="Book ID"
+              className="input font-bai-jamjuree w-full px-5 border border-primary text-lg sm:text-2xl placeholder-gray-500"
+              onChange={e => setClaimAndBurnBookId(+e.target.value)}
+            />
+            <div className="flex rounded-full border border-primary p-1 flex-shrink-0">
+              <div className="flex rounded-full border-2 border-primary p-1">
+                <button
+                  className="btn btn-primary rounded-full capitalize font-normal font-white w-24 flex items-center gap-1 hover:gap-2 transition-all tracking-widest"
+                  onClick={() => writeClaimAndBurnAsync()}
+                  disabled={isClaimAndBurnLoading}
+                >
+                  {isClaimAndBurnLoading ? (
                     <span className="loading loading-spinner loading-sm"></span>
                   ) : (
                     <>
