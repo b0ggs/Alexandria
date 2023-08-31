@@ -25,8 +25,8 @@ contract AlexandriaMint is ERC1155, ERC1155Supply {
 
     AlexandriaData public data;
     address public manager;
-    string public constant NAME = "Alexandria";
-    string public constant SYMBOL = "PAGE";
+    string public constant name = "Alexandria";
+    string public constant symbol = "PAGE";
     mapping(uint256 => string) public _uris;
     uint256 public totalNFTs = 0;
 
