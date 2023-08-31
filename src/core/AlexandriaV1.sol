@@ -16,7 +16,7 @@ error PaymentError(uint256 sentAmount, uint256 requiredAmount);
 error ExceedsTreasuryBalance(uint256 requestedAmount, uint256 currentBalance);
 
 /// @title Alexandria Version 1 Contract
-/// @author bogs
+/// @author b0ggs & ethaspera
 /// @notice This contract integrates AlexandriaData, AlexandriaOracle, and AlexandriaMint.
 /// @dev This is the main contract for the Alexandria protocol.
 contract AlexandriaV1 is ReentrancyGuard {

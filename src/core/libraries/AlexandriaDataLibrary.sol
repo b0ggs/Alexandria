@@ -29,7 +29,7 @@ struct PayoutDetail {
 }
 
 /// @title Data Library for managing books and queues of Alexandria
-/// @author B0gs
+/// @author b0ggs & ethaspera
 /// @notice This library provides functionality for managing books and queues of Alexandria
 /// @dev This library is used in conjunction with AlexandriaData, AlexandriaMint, AlexandriaOracle, AlexandriaV1.
 library DataLibrary {

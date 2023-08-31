@@ -21,7 +21,7 @@ error BookAlreadyReserved(bytes32 bookHash);
 error ReservationError(string message);
 
 /// @title Alexandria Oracle Contract
-/// @author B0gs
+/// @author b0ggs & ethaspera
 /// @notice This contract handles the oracle functionalities for Alexandria.
 /// @dev This contract interacts with the AlexandriaData contract.
 contract AlexandriaOracle {

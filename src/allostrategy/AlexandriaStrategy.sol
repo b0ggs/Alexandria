@@ -15,7 +15,7 @@ import {Initializable} from "@openzeppelin/contracts/proxy/utils/Initializable.s
 import {ReentrancyGuard} from "@openzeppelin/contracts/security/ReentrancyGuard.sol";
 
 /// @title Alexandria Strategy for Allo Protocol
-/// @author b0gs
+/// @author b0ggs & ethaspera
 /// @notice This strategy allows for the integration of minting NFTs on Alexandria as an Allo strategy.
 /// @dev This contract must integrate with an AlexandriaPayoutStrategy.
 contract AlexandriaStrategy is BaseStrategy, Initializable, ReentrancyGuard {

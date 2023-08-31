@@ -8,7 +8,7 @@ import "../interfaces/IAlexandriaPayoutStrategy.sol";
 import "../../core/AlexandriaV1.sol";
 
 /// @title Alexandria Quadratic Voting Payout Strategy
-/// @author b0gs
+/// @author b0ggs & ethaspera
 /// @notice This contract implements the quadratic voting payout strategy for the Alexandria protocol.
 contract AlexandriaQVPayout is IAlexandriaPayoutStrategy {
     /// ==========================

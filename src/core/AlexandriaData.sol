@@ -9,7 +9,7 @@ error NotAuthorized();
 error OnlyManagerCanCall();
 
 /// @title Alexandria Data Management Contract
-/// @author B0gs
+/// @author b0ggs & ethaspera
 /// @notice This contract manages the data for Alexandria.
 /// @dev Manages AlexandriaDataLibrary
 contract AlexandriaData {
