@@ -5,7 +5,7 @@ const contracts = {
       name: "goerli",
       contracts: {
         AlexandriaData: {
-          address: "0x3873e1F81b8c5996cB9a69309C9deAf3ED8A0fdf",
+          address: "0xb04ee23A0CB01C9828DC20391A7fDB51445f3dB0",
           abi: [
             {
               inputs: [],
@@ -26,6 +26,16 @@ const contracts = {
                 },
               ],
               name: "BookDoesNotExist",
+              type: "error",
+            },
+            {
+              inputs: [],
+              name: "NotAuthorized",
+              type: "error",
+            },
+            {
+              inputs: [],
+              name: "OnlyManagerCanCall",
               type: "error",
             },
             {
@@ -1331,7 +1341,7 @@ const contracts = {
           ],
         },
         AlexandriaMint: {
-          address: "0xd3C6962b6E202A3f98D08a1Ed64ea8709A2441b5",
+          address: "0x88592b0273178C092067921019725d6dA354814a",
           abi: [
             {
               inputs: [
@@ -1358,6 +1368,11 @@ const contracts = {
             {
               inputs: [],
               name: "NoPagesInQueue",
+              type: "error",
+            },
+            {
+              inputs: [],
+              name: "NotManager",
               type: "error",
             },
             {
@@ -1513,6 +1528,32 @@ const contracts = {
               ],
               name: "URI",
               type: "event",
+            },
+            {
+              inputs: [],
+              name: "NAME",
+              outputs: [
+                {
+                  internalType: "string",
+                  name: "",
+                  type: "string",
+                },
+              ],
+              stateMutability: "view",
+              type: "function",
+            },
+            {
+              inputs: [],
+              name: "SYMBOL",
+              outputs: [
+                {
+                  internalType: "string",
+                  name: "",
+                  type: "string",
+                },
+              ],
+              stateMutability: "view",
+              type: "function",
             },
             {
               inputs: [
@@ -1710,19 +1751,6 @@ const contracts = {
               type: "function",
             },
             {
-              inputs: [],
-              name: "name",
-              outputs: [
-                {
-                  internalType: "string",
-                  name: "",
-                  type: "string",
-                },
-              ],
-              stateMutability: "view",
-              type: "function",
-            },
-            {
               inputs: [
                 {
                   internalType: "address",
@@ -1840,19 +1868,6 @@ const contracts = {
             },
             {
               inputs: [],
-              name: "symbol",
-              outputs: [
-                {
-                  internalType: "string",
-                  name: "",
-                  type: "string",
-                },
-              ],
-              stateMutability: "view",
-              type: "function",
-            },
-            {
-              inputs: [],
               name: "totalNFTs",
               outputs: [
                 {
@@ -1905,7 +1920,7 @@ const contracts = {
           ],
         },
         AlexandriaOracle: {
-          address: "0x5F1b53b1d623D8a7b7a44a3926A2CE6793AD2706",
+          address: "0x89b90B17aB50069Ab2D723Dd37b366D32262128d",
           abi: [
             {
               inputs: [
@@ -1997,6 +2012,11 @@ const contracts = {
                 },
               ],
               name: "IdsNotEqualPagecount",
+              type: "error",
+            },
+            {
+              inputs: [],
+              name: "NotManager",
               type: "error",
             },
             {
@@ -2641,7 +2661,7 @@ const contracts = {
           ],
         },
         AlexandriaV1: {
-          address: "0x46EFe6A8f9D3C84F2E0d32E5b2924FDc1a1162a1",
+          address: "0x182Ef3cf19Fd86D5f090DC49bC853bf2692b9679",
           abi: [
             {
               inputs: [
@@ -2678,6 +2698,11 @@ const contracts = {
                 },
               ],
               name: "ExceedsTreasuryBalance",
+              type: "error",
+            },
+            {
+              inputs: [],
+              name: "NotManager",
               type: "error",
             },
             {
