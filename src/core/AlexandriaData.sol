@@ -1,5 +1,5 @@
-// SPDX-License-Identifier: MIT
-pragma solidity >=0.8.0 <0.9.0;
+// SPDX-License-Identifier: AGPL-3.0-only
+pragma solidity 0.8.19;
 
 // Internal Libraries
 import "./libraries/AlexandriaDataLibrary.sol";
@@ -50,29 +50,28 @@ contract AlexandriaData {
     // ====== Modifiers =======
     // ========================
 
-    //TODO add modifiers after testing
     /// @notice Ensures only the oracle manager can call a function.
     modifier onlyOracleManager() {
-        //   if (msg.sender != oracleManager) revert NotAuthorized();
+        if (msg.sender != oracleManager) revert NotAuthorized();
         _;
     }
 
     /// @notice Ensures only the mint manager can call a function.
     modifier onlyMintManager() {
-        //  if (msg.sender != mintManager) revert NotAuthorized();
+        if (msg.sender != mintManager) revert NotAuthorized();
         _;
     }
 
     /// @notice Ensures only the general manager can call a function.
     modifier onlyManager() {
-        //   if (msg.sender != manager) revert OnlyManagerCanCall();
+        if (msg.sender != manager) revert OnlyManagerCanCall();
         _;
     }
 
     /// @notice Ensures only the oracle manager or general manager can call a function.
     modifier onlyOracleManagerOrManager() {
-        //    if (msg.sender != oracleManager && msg.sender != manager)
-        //  revert NotAuthorized();
+        if (msg.sender != oracleManager && msg.sender != manager)
+            revert NotAuthorized();
         _;
     }
 

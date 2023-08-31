@@ -1,14 +1,5 @@
-//// TODO: Remove Hashes for testing
-//// 0x3fd54831f488a22b28398de0c567a3b064b937f54f81739ae9bd545967f3ab1a
-//// 0x3fd54831f488a22b28398de0c567a3b064b937f54f81739ae9bd545967f3ab1b
-//// 0x3fd54831f488a22b28398de0c567a3b064b937f54f81739ae9bd545967f3ab1c
-//// 0x3fd54831f488a22b28398de0c567a3b064b937f54f81739ae9bd545967f3ab1d
-//// 0x3fd54831f488a22b28398de0c567a3b064b937f54f81739ae9bd545967f3ab1e
-//// 0x3fd54831f488a22b28398de0c567a3b064b937f54f81739ae9bd545967f3ab1f
-////0x3fd54831f588a22b28398df0c567a3b064b937f54f81739ae9bd545967f3abae
-
-// SPDX-License-Identifier: MIT
-pragma solidity >=0.8.0 <0.9.0;
+// SPDX-License-Identifier: AGPL-3.0-only
+pragma solidity 0.8.19;
 
 //Internal Libraries
 import {AlexandriaData, Book, PayoutDetail} from "./AlexandriaData.sol";
@@ -70,14 +61,13 @@ contract AlexandriaV1 is ReentrancyGuard {
     /// =========== Modifiers ==============
     /// ====================================
 
-    //TODO add modifiers after testing
     modifier onlyManager() {
-        //    if (msg.sender != manager) revert NotManager();
+        if (msg.sender != manager) revert NotManager();
         _;
     }
 
     modifier onlyAllo() {
-        //    if (msg.sender != AlexandriaAllo) revert NotManager();
+        if (msg.sender != AlexandriaAllo) revert NotManager();
         _;
     }
 

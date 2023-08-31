@@ -1,5 +1,5 @@
-// SPDX-License-Identifier: MIT
-pragma solidity >=0.8.0 <0.9.0;
+// SPDX-License-Identifier: AGPL-3.0-only
+pragma solidity 0.8.19;
 
 // Internal Libraries
 import {AlexandriaData, Book, PayoutDetail} from "./AlexandriaData.sol";
@@ -45,9 +45,8 @@ contract AlexandriaMint is ERC1155, ERC1155Supply {
     /// =========== Modifiers ==============
     /// ====================================
 
-    //TODO add modifiers after testing
     modifier onlyManager() {
-        //  if (msg.sender != manager) revert NotManager();
+        if (msg.sender != manager) revert NotManager();
         _;
     }
 
