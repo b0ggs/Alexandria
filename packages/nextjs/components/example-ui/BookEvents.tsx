@@ -14,7 +14,7 @@ type Props = {
 };
 
 const BookEvents = ({ events }: Props) => {
-  return events.map(evt => {
+  const bookEvent = events.map(evt => {
     switch (evt.kind) {
       case "reservationMade": {
         const rEvt: ReservationMadeEvent = evt;
@@ -196,6 +196,8 @@ const BookEvents = ({ events }: Props) => {
       }
     }
   });
+
+  return <>{bookEvent}</>;
 };
 
 export default BookEvents;
