@@ -5,7 +5,7 @@ const contracts = {
       name: "goerli",
       contracts: {
         AlexandriaData: {
-          address: "0xb04ee23A0CB01C9828DC20391A7fDB51445f3dB0",
+          address: "0xd1b8b78a2e6125e3cAe86Cc2e58Eb4d7BA4E9A2B",
           abi: [
             {
               inputs: [],
@@ -1341,7 +1341,7 @@ const contracts = {
           ],
         },
         AlexandriaMint: {
-          address: "0x88592b0273178C092067921019725d6dA354814a",
+          address: "0xbA8d052cBDB91D31e8e1828347a663Af9dE80eCe",
           abi: [
             {
               inputs: [
@@ -1920,7 +1920,7 @@ const contracts = {
           ],
         },
         AlexandriaOracle: {
-          address: "0x89b90B17aB50069Ab2D723Dd37b366D32262128d",
+          address: "0xc0AB70D13EB5A2ad905E60DB8425724A899715D0",
           abi: [
             {
               inputs: [
@@ -2661,7 +2661,7 @@ const contracts = {
           ],
         },
         AlexandriaV1: {
-          address: "0x182Ef3cf19Fd86D5f090DC49bC853bf2692b9679",
+          address: "0x9A0e8Dc62a5a9F02A37f427bfbd6efD12fCfA1C7",
           abi: [
             {
               inputs: [
