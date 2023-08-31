@@ -18,7 +18,8 @@ const Home: NextPage = () => {
             <Link
               href="/example-ui"
               passHref
-              className="mx-auto btn btn-primary w-40 text-4xl font-bold rounded-full capitalize block hover:gap-2 tracking-widest">
+              className="mx-auto btn btn-primary w-40 text-4xl font-bold rounded-full capitalize block hover:gap-2 tracking-widest"
+            >
               ENTER
             </Link>
             <span className="hidden text-4xl font-bold">Scaffold-ETH 2</span>
