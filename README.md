@@ -8,7 +8,7 @@ This repository contains the codebase for the Alexandria Protocol.
 
 - [Alexandria Core Protocol README](src/core/README.MD)
 - [Allo AlexandriaStrategy README](/src/allostrategy/README.MD)
-- [Demo Link](https://alexandria-protocol.vercel.app/)
+- [Demo Link](https://alexandria-protocol.vercel.app/) TRY MINTING A PAGE!
 - [Opensea Link](https://testnets.opensea.io/collection/alexandria-2)
 
 ### Smart Contracts
