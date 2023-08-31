@@ -5,7 +5,7 @@ const contracts = {
       name: "goerli",
       contracts: {
         AlexandriaData: {
-          address: "0xd1b8b78a2e6125e3cAe86Cc2e58Eb4d7BA4E9A2B",
+          address: "0xad38733D8625B5B16A1d9fe7C7C68b4bDc4Cf727",
           abi: [
             {
               inputs: [],
@@ -1341,7 +1341,7 @@ const contracts = {
           ],
         },
         AlexandriaMint: {
-          address: "0xbA8d052cBDB91D31e8e1828347a663Af9dE80eCe",
+          address: "0x26cd2c35c0273387a04C927ba2CCB388393d7AeE",
           abi: [
             {
               inputs: [
@@ -1528,32 +1528,6 @@ const contracts = {
               ],
               name: "URI",
               type: "event",
-            },
-            {
-              inputs: [],
-              name: "NAME",
-              outputs: [
-                {
-                  internalType: "string",
-                  name: "",
-                  type: "string",
-                },
-              ],
-              stateMutability: "view",
-              type: "function",
-            },
-            {
-              inputs: [],
-              name: "SYMBOL",
-              outputs: [
-                {
-                  internalType: "string",
-                  name: "",
-                  type: "string",
-                },
-              ],
-              stateMutability: "view",
-              type: "function",
             },
             {
               inputs: [
@@ -1751,6 +1725,19 @@ const contracts = {
               type: "function",
             },
             {
+              inputs: [],
+              name: "name",
+              outputs: [
+                {
+                  internalType: "string",
+                  name: "",
+                  type: "string",
+                },
+              ],
+              stateMutability: "view",
+              type: "function",
+            },
+            {
               inputs: [
                 {
                   internalType: "address",
@@ -1868,6 +1855,19 @@ const contracts = {
             },
             {
               inputs: [],
+              name: "symbol",
+              outputs: [
+                {
+                  internalType: "string",
+                  name: "",
+                  type: "string",
+                },
+              ],
+              stateMutability: "view",
+              type: "function",
+            },
+            {
+              inputs: [],
               name: "totalNFTs",
               outputs: [
                 {
@@ -1920,7 +1920,7 @@ const contracts = {
           ],
         },
         AlexandriaOracle: {
-          address: "0xc0AB70D13EB5A2ad905E60DB8425724A899715D0",
+          address: "0x2e7af1040bA919654A5A7C28Cc9Ef215dF1b5CaA",
           abi: [
             {
               inputs: [
@@ -2661,7 +2661,7 @@ const contracts = {
           ],
         },
         AlexandriaV1: {
-          address: "0x9A0e8Dc62a5a9F02A37f427bfbd6efD12fCfA1C7",
+          address: "0xd2A83f761Cf5bFf7Fa80Af903e4E10a83888EF39",
           abi: [
             {
               inputs: [

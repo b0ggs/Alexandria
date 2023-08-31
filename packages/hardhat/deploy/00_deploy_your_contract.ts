@@ -25,6 +25,7 @@ const deployYourContract: DeployFunction = async function (hre: HardhatRuntimeEn
   const lib = await hre.ethers.getContractFactory("DataLibrary", { signer: signers[0] });
   const alexandriaDataLibrary = await lib.deploy();
   await alexandriaDataLibrary.deployed();
+  console.log("alexandriaDataLibrary deployed: ", alexandriaDataLibrary.address);
 
   await deploy("AlexandriaData", {
     from: deployer,
