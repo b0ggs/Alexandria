@@ -1,27 +1,25 @@
 # Alexandria Protocol
 
-The Alexandria Protocol is a solution designed to ensure knowledge remains accessible and uncensored for future generations. Drawing inspiration from the ancient Library of Alexandria with a modern twist, leveraging decentralized technology and community governance.
-
-![Alexandria Protocol Banner](banner.png)
+The Alexandria Protocol is a solution designed to ensure knowledge remains accessible and uncensored for future generations. Drawing inspiration from the ancient Library of Alexandria with a modern twist, leveraging decentralized technology and DAO governance.
 
 This repository contains the codebase for the Alexandria Protocol.
 
 ## Important Links
 
 - [Alexandria Core Protocol README](src/core/README.MD)
-- [Allo AlexandriaStrategy Readme](../src/allostrategy/README.MD)
+- [Allo AlexandriaStrategy README](/src/allostrategy/README.MD)
 - [Demo Link](https://alexandria-protocol.vercel.app/)
-- [Opensea Link](#)
+- [Opensea Link](https://testnets.opensea.io/collection/alexandria-2)
 
 ### Smart Contracts
 
 | Description           | Link                                                                                                                         |
 | --------------------- | ---------------------------------------------------------------------------------------------------------------------------- |
-| AlexandriaV1          | [0x9A0e8Dc62a5a9F02A37f427bfbd6efD12fCfA1C7](https://goerli.etherscan.io/address/0x9A0e8Dc62a5a9F02A37f427bfbd6efD12fCfA1C7) |
-| AlexandriaMint        | [0xbA8d052cBDB91D31e8e1828347a663Af9dE80eCe](https://goerli.etherscan.io/address/0xbA8d052cBDB91D31e8e1828347a663Af9dE80eCe) |
-| AlexandriaOracle      | [0xc0AB70D13EB5A2ad905E60DB8425724A899715D0](https://goerli.etherscan.io/address/0xc0AB70D13EB5A2ad905E60DB8425724A899715D0) |
-| AlexandriaData        | [0xd1b8b78a2e6125e3cAe86Cc2e58Eb4d7BA4E9A2B](https://goerli.etherscan.io/address/0xd1b8b78a2e6125e3cAe86Cc2e58Eb4d7BA4E9A2B) |
-| AlexandriaDataLibrary | [#](#)                                                                                                                       |
+| AlexandriaV1          | [0xd2A83f761Cf5bFf7Fa80Af903e4E10a83888EF39](https://goerli.etherscan.io/address/0xd2A83f761Cf5bFf7Fa80Af903e4E10a83888EF39) |
+| AlexandriaMint        | [0x26cd2c35c0273387a04C927ba2CCB388393d7AeE](https://goerli.etherscan.io/address/0x26cd2c35c0273387a04C927ba2CCB388393d7AeE) |
+| AlexandriaOracle      | [0x2e7af1040bA919654A5A7C28Cc9Ef215dF1b5CaA](https://goerli.etherscan.io/address/0x2e7af1040bA919654A5A7C28Cc9Ef215dF1b5CaA) |
+| AlexandriaData        | [0xad38733D8625B5B16A1d9fe7C7C68b4bDc4Cf727](https://goerli.etherscan.io/address/0xad38733D8625B5B16A1d9fe7C7C68b4bDc4Cf727) |
+| AlexandriaDataLibrary | [0x46f49da9c4b0fd016609a8421b35472511866afb](https://goerli.etherscan.io/address/0x46f49da9c4b0fd016609a8421b35472511866afb) |
 
 # Open-source Software for Hashing a PDF URL
 
